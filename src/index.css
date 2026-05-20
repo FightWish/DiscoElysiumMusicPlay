@@ -1,0 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Oswald:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Noto Serif SC", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-oswald: "Oswald", ui-sans-serif, system-ui, sans-serif;
+  --color-de-orange: #b0351b;
+  --color-de-bg: #0c0d10;
+  --color-de-panel: #1a1c22;
+  --color-de-text: #e3e0d7;
+  --color-de-muted: #666666;
+}
+
+@layer utilities {
+  .bg-noise {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+  }
+  
+  /* Custom scrollbar for dialogue */
+  .scrollbar-de::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-de::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+  }
+  .scrollbar-de::-webkit-scrollbar-thumb {
+    background: #d85c27;
+    border-radius: 3px;
+  }
+}
+
