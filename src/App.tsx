@@ -109,8 +109,10 @@ const parseLRC = (lrcString: string): LyricLine[] => {
 
 // --- Components ---
 
-function Knob({ label, value, onChange, isVolume = false, inactive = false }: { label: string, value: number, onChange?: (val: number) => void, isVolume?: boolean, inactive?: boolean }) {
-  const rotation = inactive ? 45 : (value * 270 - 135);
+function Knob({ label, value, onChange, onChangeStart, onChangeEnd, isVolume = false, inactive = false }: { label: string, value: number, onChange?: (val: number) => void, onChangeStart?: () => void, onChangeEnd?: (val: number) => void, isVolume?: boolean, inactive?: boolean }) {
+  const [internalValue, setInternalValue] = useState<number | null>(null);
+  const displayValue = internalValue !== null ? internalValue : value;
+  const rotation = inactive ? 45 : (displayValue * 270 - 135);
   
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (inactive || !onChange) return;
@@ -118,16 +120,28 @@ function Knob({ label, value, onChange, isVolume = false, inactive = false }: { 
     const el = e.currentTarget;
     try { el.setPointerCapture(e.pointerId); } catch (err) {}
     
+    if (onChangeStart) {
+      onChangeStart();
+    }
+    
     const startY = e.clientY;
     const startX = e.clientX;
-    const startValue = value;
+    const startValue = displayValue;
+    
+    setInternalValue(startValue);
+    
+    let lastVal = startValue;
     
     const onMove = (eMove: Event) => {
       const moveEv = eMove as unknown as PointerEvent;
       const deltaY = startY - moveEv.clientY;
       const deltaX = moveEv.clientX - startX;
+      // Faster response for knob
       const delta = (deltaY + deltaX) * 0.005; 
-      onChange(Math.max(0, Math.min(1, startValue + delta)));
+      const currentVal = Math.max(0, Math.min(1, startValue + delta));
+      lastVal = currentVal;
+      setInternalValue(currentVal);
+      onChange(currentVal);
     };
     
     const onUp = (eUp: Event) => {
@@ -135,6 +149,10 @@ function Knob({ label, value, onChange, isVolume = false, inactive = false }: { 
       el.removeEventListener('pointermove', onMove);
       el.removeEventListener('pointerup', onUp);
       try { el.releasePointerCapture(upEv.pointerId); } catch (err) {}
+      setInternalValue(null);
+      if (onChangeEnd) {
+        onChangeEnd(lastVal);
+      }
     };
     
     el.addEventListener('pointermove', onMove);
@@ -169,6 +187,7 @@ export default function App() {
   const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(true);
   
   const audioRef = useRef<HTMLAudioElement>(null);
+  const isTuningRef = useRef(false);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -196,7 +215,7 @@ export default function App() {
 
   // Audio Event Handlers
   const handleTimeUpdate = () => {
-    if (audioRef.current) {
+    if (audioRef.current && !isTuningRef.current) {
       setCurrentTime(audioRef.current.currentTime);
     }
   };
@@ -417,11 +436,22 @@ export default function App() {
               {/* Left side knobs */}
               <div className="flex gap-4 lg:gap-8 px-2 lg:px-4 flex-shrink-0">
                 <Knob label="音 量" value={volume} onChange={(v) => setVolume(v)} isVolume />
-                <Knob label="调 谐" value={duration ? currentTime / duration : 0} onChange={(v) => {
-                  const newTime = v * duration;
-                  if (audioRef.current) audioRef.current.currentTime = newTime;
-                  setCurrentTime(newTime);
-                }} />
+                <Knob 
+                  label="调 谐" 
+                  value={duration ? currentTime / duration : 0} 
+                  onChangeStart={() => {
+                    isTuningRef.current = true;
+                  }}
+                  onChange={(v) => {
+                    const newTime = v * duration;
+                    setCurrentTime(newTime);
+                  }} 
+                  onChangeEnd={(v) => {
+                    const newTime = v * duration;
+                    if (audioRef.current) audioRef.current.currentTime = newTime;
+                    isTuningRef.current = false;
+                  }} 
+                />
                 <Knob label="调 频" value={0.1} inactive />
               </div>
               
