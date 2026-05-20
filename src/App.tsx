@@ -117,9 +117,7 @@ function Knob({ label, value, onChange, onChangeStart, onChangeEnd, isVolume = f
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (inactive || !onChange) return;
     
-    const el = e.currentTarget;
-    try { el.setPointerCapture(e.pointerId); } catch (err) {}
-    
+    e.preventDefault();
     if (onChangeStart) {
       onChangeStart();
     }
@@ -132,10 +130,9 @@ function Knob({ label, value, onChange, onChangeStart, onChangeEnd, isVolume = f
     
     let lastVal = startValue;
     
-    const onMove = (eMove: Event) => {
-      const moveEv = eMove as unknown as PointerEvent;
-      const deltaY = startY - moveEv.clientY;
-      const deltaX = moveEv.clientX - startX;
+    const onMove = (eMove: PointerEvent) => {
+      const deltaY = startY - eMove.clientY;
+      const deltaX = eMove.clientX - startX;
       // Faster response for knob
       const delta = (deltaY + deltaX) * 0.005; 
       const currentVal = Math.max(0, Math.min(1, startValue + delta));
@@ -144,19 +141,19 @@ function Knob({ label, value, onChange, onChangeStart, onChangeEnd, isVolume = f
       onChange(currentVal);
     };
     
-    const onUp = (eUp: Event) => {
-      const upEv = eUp as unknown as PointerEvent;
-      el.removeEventListener('pointermove', onMove);
-      el.removeEventListener('pointerup', onUp);
-      try { el.releasePointerCapture(upEv.pointerId); } catch (err) {}
+    const onUp = (eUp: PointerEvent) => {
+      window.removeEventListener('pointermove', onMove as EventListener);
+      window.removeEventListener('pointerup', onUp as EventListener);
+      window.removeEventListener('pointercancel', onUp as EventListener);
       setInternalValue(null);
       if (onChangeEnd) {
         onChangeEnd(lastVal);
       }
     };
     
-    el.addEventListener('pointermove', onMove);
-    el.addEventListener('pointerup', onUp);
+    window.addEventListener('pointermove', onMove as EventListener);
+    window.addEventListener('pointerup', onUp as EventListener);
+    window.addEventListener('pointercancel', onUp as EventListener);
   };
 
   return (
@@ -226,11 +223,7 @@ export default function App() {
     }
   };
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTime = (Number(e.target.value) / 100) * duration;
-    if (audioRef.current) audioRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
-  };
+
 
   const handleTrackEnded = () => {
     if (playMode === 'rand') {
@@ -387,8 +380,20 @@ export default function App() {
                   type="range" 
                   min="0" 
                   max="100" 
+                  step="any"
                   value={duration ? (currentTime / duration) * 100 : 0} 
-                  onChange={handleSeek}
+                  onPointerDown={() => { isTuningRef.current = true; }}
+                  onChange={(e) => {
+                    const newTime = (Number(e.target.value) / 100) * duration;
+                    setCurrentTime(newTime);
+                  }}
+                  onPointerUp={(e) => {
+                    const newTime = (Number(e.currentTarget.value) / 100) * duration;
+                    if (audioRef.current) audioRef.current.currentTime = newTime;
+                    setTimeout(() => {
+                      isTuningRef.current = false;
+                    }, 100);
+                  }}
                   className="absolute bottom-[-10px] left-10 right-10 h-8 opacity-0 cursor-ew-resize z-20"
                 />
               </div>
