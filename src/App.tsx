@@ -4,10 +4,10 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, SkipBack, SkipForward, Volume2, Shuffle, Repeat, Star } from 'lucide-react';
-import chocologicalLrc from './assets/songlyrics/Chocological_Kim.lrc?raw';
-import euSemVoceLrc from './assets/songlyrics/Eu sem você_cut_Kim.lrc?raw';
-import planuLrc from './assets/songlyrics/一切按计划进行_Kim.lrc?raw';
+import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Star } from 'lucide-react';
+import chocologicalLrc from '../SongLyrics/Chocological_Kim.lrc?raw';
+import euSemVoceLrc from '../SongLyrics/Eu sem você_cut_Kim.lrc?raw';
+import planuLrc from '../SongLyrics/一切按计划进行_Kim.lrc?raw';
 
 // --- Types & Data ---
 
@@ -35,7 +35,7 @@ const PLAYLIST: Track[] = [
     artist: '[Original] Mili',
     album: '狂飙怪人.FM',
     cover: 'https://images.unsplash.com/photo-1621252179027-94459d278660?w=400&q=80',
-    audioUrl: '/songupload/Chocological_Kim.mp3',
+    audioUrl: '/SongUpload/Chocological_Kim.mp3',
     lrc: chocologicalLrc
   },
   {
@@ -44,7 +44,7 @@ const PLAYLIST: Track[] = [
     artist: '[Original] Lilian',
     album: '狂飙怪人.FM',
     cover: 'https://images.unsplash.com/photo-1596700812739-16f5c5319888?w=400&q=80',
-    audioUrl: '/songupload/Eu sem você_cut_Kim.mp3',
+    audioUrl: '/SongUpload/Eu sem você_cut_Kim.mp3',
     lrc: euSemVoceLrc
   },
   {
@@ -53,7 +53,7 @@ const PLAYLIST: Track[] = [
     artist: '[Original] Егор Летов',
     album: '狂飙怪人.FM',
     cover: 'https://images.unsplash.com/photo-1505672678657-cc7037095e60?w=400&q=80',
-    audioUrl: '/songupload/一切按计划进行_Kim.mp3',
+    audioUrl: '/SongUpload/一切按计划进行_Kim.mp3',
     lrc: planuLrc
   },
   {
