@@ -5,6 +5,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause, SkipBack, SkipForward, Volume2, Shuffle, Repeat, Star } from 'lucide-react';
+import chocologicalLrc from '../SongLyrics/Chocological_Kim.lrc?raw';
+import euSemVoceLrc from '../SongLyrics/Eu sem você_cut_Kim.lrc?raw';
+import planuLrc from '../SongLyrics/一切按计划进行_Kim.lrc?raw';
 
 // --- Types & Data ---
 
@@ -28,44 +31,43 @@ interface Track {
 const PLAYLIST: Track[] = [
   {
     id: 't1',
-    title: '思维与物质 #7 - 阶级斗争的辩证法',
-    artist: '革命浪潮电台',
-    album: '声音属于人民',
+    title: 'Chocological\n(Key Ingredient ver.)',
+    artist: '[Original] Mili',
+    album: '狂飙怪人.FM',
     cover: 'https://images.unsplash.com/photo-1621252179027-94459d278660?w=400&q=80',
-    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-    lrc: `[00:00.00]旁白 - 来自全世界工人阶级的声音。政治、工会、诗歌，以及未实现世界的低语。
-[00:05.50]乔伊丝 - 这是历史必然的进程，朋友。
-[00:10.20]你 - 等等，这只是一段音乐？
-[00:14.00]逻辑思维 - 音乐本身也是一种物质表达形式，宿主。
-[00:18.50]旁白 - 电波里传来了轰鸣的节拍，像是远方工厂坍塌的回音。
-[00:23.00]恐怖领带 - 兄弟！跟着节奏摇摆起来！不要去管那些沉重的东西！
-[00:28.00]旁白 - 音乐开始加剧，世界在你眼前折叠。请闭上眼睛聆听。`
+    audioUrl: '/SongUpload/Chocological_Kim.mp3',
+    lrc: chocologicalLrc
   },
   {
     id: 't2',
-    title: '小马邮政之声',
-    artist: '王国广播联盟',
-    album: 'Revachol Echoes',
+    title: 'Eu Sem Você (Por Que Te Vás)\n失去你的我',
+    artist: '[Original] Lilian',
+    album: '狂飙怪人.FM',
     cover: 'https://images.unsplash.com/photo-1596700812739-16f5c5319888?w=400&q=80',
-    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-    lrc: `[00:00.00]你 - 这是哪里传来的声音？
-[00:08.00]内陆帝国 - 听。那是尘埃在木板上跳舞的声音，是遗忘在角落的信件发出的叹息。
-[00:15.50]你 - 我觉得这听起来像是一首古老的圆舞曲。
-[00:22.00]内陆帝国 - 不，错的离谱。这是时代的挽歌。每一个音符都是一次失败的妥协。
-[00:30.00]旁白 - 收音机的杂音开始变大，掩盖了后面的旋律。`
+    audioUrl: '/SongUpload/Eu sem você_cut_Kim.mp3',
+    lrc: euSemVoceLrc
   },
   {
     id: 't3',
-    title: '海岸守望者电台',
-    artist: '夜城低语',
-    album: '灰色的海',
+    title: 'Всё идёт по плану\n一切按计划进行',
+    artist: '[Original] Егор Летов',
+    album: '狂飙怪人.FM',
+    cover: 'https://images.unsplash.com/photo-1505672678657-cc7037095e60?w=400&q=80',
+    audioUrl: '/SongUpload/一切按计划进行_Kim.mp3',
+    lrc: planuLrc
+  },
+  {
+    id: 't4',
+    title: '——',
+    artist: '[Original] 随机',
+    album: '狂飙怪人.FM',
     cover: 'https://images.unsplash.com/photo-1505672678657-cc7037095e60?w=400&q=80',
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
     lrc: `[00:00.00]警觉 - 有海浪的声音...
 [00:04.00]旁白 - 冰冷的海水拍打着暗礁，一台老式收音机被遗弃在岸边。
 [00:11.00]你 - 还能用吗？
 [00:16.00]能工巧匠 - 勉强可以。电子管虽然老化，但核心还没完全烧毁。
-[00:24.00]旁白 - 刺耳的电流音之后，一段忧伤的女声穿透了潮湿的空气。`
+[00:24.00]旁白 - 刺耳的电流音之后，一阵劲爆的电子乐穿透了潮湿的空气。`
   }
 ];
 
@@ -466,15 +468,21 @@ export default function App() {
         <div className="md:w-2/5 flex flex-col h-full bg-[#111317] p-10 overflow-hidden relative">
            
            {/* Current Track Info Header - Designed like a Skill context block */}
-           <div className="mb-6 flex gap-4">
+           <div className="mb-4">
              <div className="flex flex-col pt-2 font-serif">
-                <span className="text-de-orange font-bold text-xl tracking-wider leading-tight mb-1">{currentTrack.artist}</span>
-                <span className="text-[#a0a0a0] text-sm mb-4">声音属于人民。</span>
-                <span className="text-[#d0d0d0] text-sm leading-relaxed block overflow-hidden line-clamp-3">
-                  正在播放：<br/>
-                  {currentTrack.title} <br/>
-                  <span className="text-de-muted mt-1 block">来自专辑：{currentTrack.album}</span>
+                <span className="text-de-orange font-bold text-2xl tracking-wider leading-tight mb-3 whitespace-pre-line">
+                  {currentTrack.title}
                 </span>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[#a0a0a0] text-sm tracking-wide flex">
+                    <span className="inline-block w-[95px] font-bold shrink-0">[ORIGINAL]</span>
+                    <span className="text-[#d0d0d0]">{currentTrack.artist.replace(/\[?Original\]?\s*/i, '').trim()}</span>
+                  </span>
+                  <span className="text-[#a0a0a0] text-sm tracking-wide flex">
+                    <span className="inline-block w-[95px] font-bold shrink-0 whitespace-pre">[AI  COVER]</span>
+                    <span className="text-[#d0d0d0]">Kim Kitsuragi</span>
+                  </span>
+                </div>
              </div>
            </div>
 
