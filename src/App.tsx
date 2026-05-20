@@ -5,9 +5,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause, SkipBack, SkipForward, Volume2, Shuffle, Repeat, Star } from 'lucide-react';
-import chocologicalLrc from '../SongLyrics/Chocological_Kim.lrc?raw';
-import euSemVoceLrc from '../SongLyrics/Eu sem você_cut_Kim.lrc?raw';
-import planuLrc from '../SongLyrics/一切按计划进行_Kim.lrc?raw';
+import chocologicalLrc from './assets/SongLyrics/Chocological_Kim.lrc?raw';
+import euSemVoceLrc from './assets/SongLyrics/Eu sem você_cut_Kim.lrc?raw';
+import planuLrc from './assets/SongLyrics/一切按计划进行_Kim.lrc?raw';
 
 // --- Types & Data ---
 
