@@ -324,7 +324,7 @@ export default function App() {
   }, [activeLyricIndex]);
 
   return (
-    <div className="min-h-screen bg-de-bg text-de-text font-serif flex items-center justify-center p-4 selection:bg-de-orange selection:text-white overflow-hidden select-none">
+    <div className="min-h-screen bg-de-bg text-de-text font-serif flex md:items-center justify-center p-0 md:p-4 selection:bg-de-orange selection:text-white select-none">
       
       {/* Hidden Audio Element */}
       <audio 
@@ -335,10 +335,10 @@ export default function App() {
         onEnded={handleTrackEnded}
       />
 
-      <div className="w-full max-w-[1280px] aspect-video flex flex-col md:flex-row shadow-2xl rounded overflow-hidden">
+      <div className="w-full max-w-[1280px] min-h-[100dvh] md:min-h-[600px] md:h-[90vh] flex flex-col md:flex-row shadow-2xl md:rounded overflow-hidden md:overflow-hidden relative">
         
         {/* LEFT PANEL : The FM Radio Player */}
-        <div className="md:w-3/5 flex flex-col p-8 border-r border-[#2a2c31] bg-gradient-to-br from-[#121417] to-[#0c0d10]">
+        <div className="md:w-3/5 flex-shrink-0 min-h-[600px] md:min-h-0 md:flex-1 flex flex-col p-4 sm:p-8 border-b md:border-b-0 md:border-r border-[#2a2c31] bg-gradient-to-br from-[#121417] to-[#0c0d10] overflow-y-auto scrollbar-de">
           
           {/* Header Title */}
           <div className="mb-8">
@@ -353,7 +353,7 @@ export default function App() {
 
           {/* Radio Chassis */}
           <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="w-full bg-de-panel border-[3px] border-[#3a3d45] rounded-sm p-8 shadow-2xl flex flex-col relative overflow-hidden">
+            <div className="w-full bg-de-panel border-[3px] border-[#3a3d45] rounded-sm p-4 sm:p-6 lg:p-8 shadow-2xl flex flex-col relative overflow-hidden">
             {/* Grime overlay removed */}
             
             {/* Dial & Frequencies */}
@@ -512,7 +512,7 @@ export default function App() {
         </div>
 
         {/* RIGHT PANEL : Dialogue / Lyrics Log */}
-        <div className="md:w-2/5 flex flex-col h-full bg-[#111317] p-10 overflow-hidden relative">
+        <div className="md:w-2/5 flex flex-col flex-1 min-h-[400px] md:min-h-0 md:h-full bg-[#111317] p-6 sm:p-10 overflow-hidden relative">
            
            {/* Current Track Info Header - Designed like a Skill context block */}
            <div className="mb-4">
