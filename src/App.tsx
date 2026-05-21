@@ -28,8 +28,8 @@ interface Track {
 
 const PLAYLIST_URL = 'https://kimkitsuragi.oss-cn-hangzhou.aliyuncs.com/svc_done/playlist.json';
 
-// We'll keep a fallback empty array so the app doesn't crash before loading
-let PLAYLIST: Track[] = defaultPlaylist as Track[];
+// We'll keep a fallback so the app doesn't crash before loading
+let FALLBACK_PLAYLIST: Track[] = defaultPlaylist as Track[];
 
 // --- Utility Functions ---
 
@@ -178,14 +178,46 @@ export default function App() {
     const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+  const [playlist, setPlaylist] = useState<Track[]>(FALLBACK_PLAYLIST);
+  const [isLoadingPlaylist, setIsLoadingPlaylist] = useState(true);
+  const [playlistError, setPlaylistError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    const fetchPlaylist = async () => {
+      try {
+        const res = await fetch(PLAYLIST_URL);
+        if (!res.ok) throw new Error('Network error');
+        const data = await res.json();
+        if (active && data && data.length > 0) {
+          setPlaylist(data);
+          setIsLoadingPlaylist(false);
+        }
+      } catch (err) {
+        console.error("Failed to load playlist:", err);
+        if (active) {
+          setPlaylist(FALLBACK_PLAYLIST);
+          setPlaylistError('信号微弱，未接受到数据…');
+          setIsLoadingPlaylist(false);
+        }
+      }
+    };
+    fetchPlaylist();
+    return () => { active = false; };
+  }, []);
+
   const dialogueEndRef = useRef<HTMLDivElement>(null);
   
-  const currentTrack = PLAYLIST[currentTrackIdx];
+  const currentTrack = playlist[currentTrackIdx] || FALLBACK_PLAYLIST[0];
   const [activeLyrics, setActiveLyrics] = useState<LyricLine[]>([]);
 
   useEffect(() => {
     let active = true;
     const fetchLrc = async () => {
+      if (!currentTrack || !currentTrack.lrc) {
+        if (active) setActiveLyrics([]);
+        return;
+      }
       try {
         const lrcSrc = currentTrack.lrc;
         if (lrcSrc.startsWith('http') || lrcSrc.startsWith('//') || lrcSrc.startsWith('/')) {
@@ -203,7 +235,7 @@ export default function App() {
     };
     fetchLrc();
     return () => { active = false; };
-  }, [currentTrackIdx]);
+  }, [currentTrack?.id, currentTrack?.lrc]);
   
   const progressRatio = Number.isFinite(duration) && duration > 0
     ? Math.max(0, Math.min(1, currentTime / duration))
@@ -289,11 +321,11 @@ export default function App() {
 
   const handleTrackEnded = () => {
     if (playMode === 'rand') {
-      let nextIdx = Math.floor(Math.random() * PLAYLIST.length);
-      if (nextIdx === currentTrackIdx) nextIdx = (nextIdx + 1) % PLAYLIST.length;
+      let nextIdx = Math.floor(Math.random() * playlist.length);
+      if (nextIdx === currentTrackIdx) nextIdx = (nextIdx + 1) % playlist.length;
       setCurrentTrackIdx(nextIdx);
     } else {
-      setCurrentTrackIdx((prev) => (prev + 1) % PLAYLIST.length);
+      setCurrentTrackIdx((prev) => (prev + 1) % playlist.length);
     }
   };
 
@@ -467,7 +499,17 @@ export default function App() {
                 <span className="text-sm">{isPlaylistExpanded ? '▼' : '▶'}</span>
               </button>
 
-              {isPlaylistExpanded && PLAYLIST.map((track, i) => {
+              {isPlaylistExpanded && isLoadingPlaylist && (
+                <div className={`w-full text-center py-[10px] font-serif text-sm ${T.playlistItemInactive}`}>
+                  数据加载中...
+                </div>
+              )}
+              {isPlaylistExpanded && playlistError && (
+                <div className="w-full text-center py-[10px] font-serif text-sm text-[#b0351b]">
+                  {playlistError}
+                </div>
+              )}
+              {isPlaylistExpanded && !isLoadingPlaylist && playlist.map((track, i) => {
                 const isActive = i === currentTrackIdx;
                 return (
                   <button 
@@ -517,7 +559,7 @@ export default function App() {
 
                 {/* Primary Media Buttons (Hardware aesthetic) */}
                 <div className={`flex gap-1 ml-2 p-1 rounded-sm shadow-inner border ${T.playBtnWrap}`}>
-                  <button onClick={() => playIndex((currentTrackIdx - 1 + PLAYLIST.length) % PLAYLIST.length)} className={`w-12 h-12 border-t border-l border-b-2 border-r-2 flex items-center justify-center transition-all outline-none active:scale-95 ${T.playSecondary}`} title="上一首">
+                  <button onClick={() => playIndex((currentTrackIdx - 1 + playlist.length) % playlist.length)} className={`w-12 h-12 border-t border-l border-b-2 border-r-2 flex items-center justify-center transition-all outline-none active:scale-95 ${T.playSecondary}`} title="上一首">
                     <SkipBack size={20} fill="currentColor" />
                   </button>
                   
@@ -734,7 +776,7 @@ export default function App() {
                 <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
                   <div className="bg-[#e6e2d3] border-l-[6px] border-r-[4px] border-[#a39c89] px-4 py-1.5 shadow-[2px_6px_12px_rgba(0,0,0,0.6)] transform rotate-[8deg] translate-y-[65px] translate-x-4 inline-flex items-center justify-center opacity-[0.98] rounded-sm outline-dashed outline-1 outline-offset-[-3px] outline-[#aca590] after:absolute after:inset-0 after:bg-[url('https://www.transparenttextures.com/patterns/dust.png')] after:opacity-20 after:pointer-events-none max-w-[80%]">
                      <span className="font-serif font-bold text-base sm:text-xl text-[#b0351b] uppercase tracking-widest leading-tight drop-shadow-sm text-center" style={{ fontFamily: '"Courier New", Courier, monospace' }}>
-                        {PLAYLIST[currentTrackIdx].title}
+                        {playlist[currentTrackIdx]?.title}
                      </span>
                   </div>
                 </div>
@@ -746,8 +788,8 @@ export default function App() {
                  className={`w-12 h-12 rounded-full bg-de-orange text-white flex items-center justify-center hover:bg-[#b0351b] transition-colors shadow-lg`}
                  onClick={() => {
                    const a = document.createElement('a');
-                   a.href = PLAYLIST[currentTrackIdx].audioUrl;
-                   a.download = `${PLAYLIST[currentTrackIdx].title}.mp3`;
+                   a.href = playlist[currentTrackIdx]?.audioUrl;
+                   a.download = `${playlist[currentTrackIdx]?.title}.mp3`;
                    a.click();
                  }}
                  title="Download"
