@@ -4,10 +4,11 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Star } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Star, Download, X } from 'lucide-react';
 import chocologicalLrc from '../SongLyrics/Chocological_Kim.lrc?raw';
 import euSemVoceLrc from '../SongLyrics/Eu sem você_cut_Kim.lrc?raw';
 import planuLrc from '../SongLyrics/一切按计划进行_Kim.lrc?raw';
+import mymarmaladeLrc from '../SongLyrics/Мой мармеладный (Я не права)_kim.lrc?raw';
 
 // --- Types & Data ---
 
@@ -58,16 +59,12 @@ const PLAYLIST: Track[] = [
   },
   {
     id: 't4',
-    title: '——',
-    artist: '[Original] 随机',
+    title: 'Мой мармеладный (Я не права)\n一我的果酱(我错了)',
+    artist: '[Original] Катя Лель',
     album: '狂飙怪人.FM',
     cover: 'https://images.unsplash.com/photo-1505672678657-cc7037095e60?w=400&q=80',
-    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
-    lrc: `[00:00.00]警觉 - 有海浪的声音...
-[00:04.00]旁白 - 冰冷的海水拍打着暗礁，一台老式收音机被遗弃在岸边。
-[00:11.00]你 - 还能用吗？
-[00:16.00]能工巧匠 - 勉强可以。电子管虽然老化，但核心还没完全烧毁。
-[00:24.00]旁白 - 刺耳的电流音之后，一阵劲爆的电子乐穿透了潮湿的空气。`
+    audioUrl: '/SongUpload/Мой мармеладный (Я не права)_kim.mp3',
+    lrc: mymarmaladeLrc
   }
 ];
 
@@ -196,6 +193,7 @@ export default function App() {
   const [playMode, setPlayMode] = useState<'seq' | 'rand'>('seq');
   const [now, setNow] = useState(new Date());
   const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(true);
+  const [isTapeModalOpen, setIsTapeModalOpen] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
@@ -518,6 +516,9 @@ export default function App() {
               <div className="flex gap-2 justify-center md:justify-end items-center mr-2 lg:mr-8 flex-1 min-w-[260px]">
                 {/* Shuffle & Repeat Buttons (Utility) */}
                 <div className="flex gap-2 mr-2">
+                    <button onClick={() => setIsTapeModalOpen(true)} className={`w-8 h-8 flex items-center justify-center border-t border-l border-b-2 border-r-2 transition-all active:scale-95 ${T.btnRandInactive}`} title="弹出磁带">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="rotate-180"><path d="M12 4l-8 10h16z"/><path d="M4 18h16v2H4z"/></svg>
+                    </button>
                     <button onClick={() => setPlayMode('rand')} className={`w-8 h-8 flex items-center justify-center border-t border-l border-b-2 border-r-2 transition-all active:scale-95 ${playMode === 'rand' ? T.btnRandActive : T.btnRandInactive}`} title="随机播放">
                       <Shuffle size={14} />
                     </button>
@@ -656,6 +657,126 @@ export default function App() {
 
       </div>
     </div>
+      {isTapeModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#111]/80 backdrop-blur-sm px-4">
+           <div className="relative w-full max-w-[320px] sm:max-w-md flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
+             
+             {/* Reel-To-Reel Container */}
+             <div className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] flex items-center justify-center mb-4 mt-8 drop-shadow-2xl">
+                
+                {/* 3D Base/Shadow of the Reel */}
+                <div className="absolute w-[95%] h-[95%] rounded-full bg-[#050a0c] translate-y-2 translate-x-1" />
+
+                {/* Magnetic Tape Spool (Brown) inside */}
+                <div className="absolute w-[78%] h-[78%] rounded-full bg-[#462d1c] flex items-center justify-center shadow-[inset_0_5px_15px_rgba(0,0,0,0.8)] border-4 border-[#2b1b10]">
+                   {/* Tape wind grooves */}
+                   <div className="absolute inset-0 rounded-full border border-[#593b27] m-2 opacity-40"></div>
+                   <div className="absolute inset-0 rounded-full border border-[#593b27] m-4 opacity-30"></div>
+                   <div className="absolute inset-0 rounded-full border border-[#2b1b10] m-6 opacity-60"></div>
+                   <div className="absolute inset-0 rounded-full border border-[#593b27] m-8 opacity-20"></div>
+                   <div className="absolute inset-0 rounded-full border border-[#2b1b10] m-10 opacity-70"></div>
+                   <div className="absolute inset-0 rounded-full border border-[#593b27] m-[44px] opacity-50 border-2"></div>
+                </div>
+
+                {/* Metallic Teal Reel Face */}
+                <svg viewBox="0 0 100 100" className="absolute w-full h-full drop-shadow-md" style={{ transform: 'rotate(-10deg)' }}>
+                  <defs>
+                    <linearGradient id="reelGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#325f75"/>
+                      <stop offset="35%" stopColor="#254a5c"/>
+                      <stop offset="70%" stopColor="#17313e"/>
+                      <stop offset="100%" stopColor="#0d1b22"/>
+                    </linearGradient>
+                    <linearGradient id="reelEdge" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#4a89a0"/>
+                      <stop offset="100%" stopColor="#0d1b22"/>
+                    </linearGradient>
+                    <mask id="reelCutouts">
+                      <circle cx="50" cy="50" r="50" fill="white" />
+                      {/* Central hole */}
+                      <circle cx="50" cy="50" r="14" fill="black" />
+                      {/* The 3 cutout holes. Circumference at r=31: 194.77. 194.77 / 3 = 64.92. StrokeDasharray: dash 26 + gap 38.92 */}
+                      <circle cx="50" cy="50" r="31" fill="none" stroke="black" strokeWidth="20" strokeLinecap="round" strokeDasharray="26 38.92" strokeDashoffset="18" />
+                    </mask>
+                  </defs>
+
+                  {/* Drop Shadow / Thickness of Reel Face */}
+                  <circle cx="50" cy="51.5" r="48" fill="#0a1217" mask="url(#reelCutouts)" />
+                  <circle cx="50.5" cy="50.5" r="48" fill="#0f1b21" mask="url(#reelCutouts)" />
+                  
+                  {/* Base Reel Face */}
+                  <circle cx="50" cy="50" r="48" fill="url(#reelGrad)" mask="url(#reelCutouts)" stroke="url(#reelEdge)" strokeWidth="0.5" />
+                  
+                  {/* Decorative indents on spokes */}
+                  {[0, 120, 240].map((deg, i) => (
+                    <g key={i} transform={`rotate(${deg + 45} 50 50)`}>
+                       <line x1="50" y1="5" x2="50" y2="9" stroke="#17313e" strokeWidth="1.5" strokeLinecap="round" opacity="0.8"/>
+                       <circle cx="50" cy="8.5" r="0.8" fill="#0d1b22" />
+                       <path d="M 46 25 Q 50 24 54 25" fill="none" stroke="#254a5c" strokeWidth="0.5" opacity="0.6"/>
+                    </g>
+                  ))}
+                </svg>
+                
+                {/* Central Hub (Black) */}
+                <div className="absolute w-[34%] h-[34%] rounded-full bg-[#111] z-20 flex items-center justify-center shadow-[0_6px_15px_rgba(0,0,0,0.8)] border-2 border-[#1c2830]">
+                   <div className="w-[85%] h-[85%] rounded-full bg-gradient-to-br from-[#2a2a2a] to-[#0a0a0a] flex items-center justify-center relative shadow-inner">
+                     {/* The 3 slots on the hub */}
+                     {[0, 120, 240].map(deg => (
+                       <div key={deg} className="absolute w-[10%] h-[35%] bg-[#000] top-[50%] origin-top rounded-full shadow-[inset_0_2px_4px_rgba(0,0,0,0.9)]" style={{ transform: `rotate(${deg + 15}deg) translateY(30%)` }}></div>
+                     ))}
+                     
+                     {/* 3 small screws */}
+                     {[0, 120, 240].map(deg => (
+                       <div key={'s'+deg} className="absolute w-1.5 h-1.5 bg-[#444] rounded-full shadow-inner top-[50%] origin-top" style={{ transform: `rotate(${deg - 45}deg) translateY(-140%)` }}></div>
+                     ))}
+                     
+                     {/* Small center pin */}
+                     <div className="w-[45%] h-[45%] rounded-full bg-gradient-to-br from-[#8a857a] to-[#4a473e] shadow-[0_2px_6px_rgba(0,0,0,0.8)] z-10 flex items-center justify-center border border-[#333]">
+                        <div className="w-[30%] h-[30%] rounded-full bg-[#222] shadow-inner"></div>
+                        <div className="absolute w-full h-[1px] bg-black/40 rotate-45"></div>
+                     </div>
+                   </div>
+                </div>
+
+                {/* Lighting overlays to make it pop */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/10 to-transparent pointer-events-none z-30 mix-blend-screen mix-blend-overlay"></div>
+                <div className="absolute inset-0 rounded-full bg-gradient-to-bl from-black/60 to-transparent pointer-events-none z-30 mix-blend-multiply"></div>
+
+                {/* Song Title Sticker Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
+                  <div className="bg-[#e6e2d3] border-l-[6px] border-r-[4px] border-[#a39c89] px-4 py-1.5 shadow-[2px_6px_12px_rgba(0,0,0,0.6)] transform rotate-[8deg] translate-y-[65px] translate-x-4 inline-flex items-center justify-center opacity-[0.98] rounded-sm outline-dashed outline-1 outline-offset-[-3px] outline-[#aca590] after:absolute after:inset-0 after:bg-[url('https://www.transparenttextures.com/patterns/dust.png')] after:opacity-20 after:pointer-events-none max-w-[80%]">
+                     <span className="font-serif font-bold text-base sm:text-xl text-[#b0351b] uppercase tracking-widest leading-tight drop-shadow-sm text-center" style={{ fontFamily: '"Courier New", Courier, monospace' }}>
+                        {PLAYLIST[currentTrackIdx].title}
+                     </span>
+                  </div>
+                </div>
+             </div>
+
+             {/* Controls */}
+             <div className="flex justify-center w-full mt-4 px-4 gap-6">
+               <button 
+                 className={`w-12 h-12 rounded-full bg-de-orange text-white flex items-center justify-center hover:bg-[#b0351b] transition-colors shadow-lg`}
+                 onClick={() => {
+                   const a = document.createElement('a');
+                   a.href = PLAYLIST[currentTrackIdx].src;
+                   a.download = `${PLAYLIST[currentTrackIdx].title}.mp3`;
+                   a.click();
+                 }}
+                 title="Download"
+               >
+                 <Download size={20} />
+               </button>
+               <button 
+                 className={`w-12 h-12 rounded-full bg-[#2a2c31] text-white flex items-center justify-center hover:bg-black transition-colors shadow-lg`}
+                 onClick={() => setIsTapeModalOpen(false)}
+                 title="Close"
+               >
+                 <X size={20} />
+               </button>
+             </div>
+           </div>
+        </div>
+      )}
     </>
   );
 }
