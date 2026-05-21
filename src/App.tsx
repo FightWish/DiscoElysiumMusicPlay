@@ -186,6 +186,7 @@ export default function App() {
     lyricNorSpeaker: isLight ? 'text-[#618029]' : 'text-[#666]',
     lyricYouSpeaker: isLight ? 'text-[#d96b00]' : 'text-[#ff8a00]',
     lyricOthSpeaker: isLight ? 'text-[#364968]' : 'text-[#5d80d2]',
+    lyricActiveText: isLight ? 'text-[#b0351b]' : 'text-[#e3e0d7]',
     lyricSub: isLight ? 'text-[#899c75]' : 'text-[#999]',
   };
   const [isPlaying, setIsPlaying] = useState(false);
@@ -198,6 +199,17 @@ export default function App() {
   
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
+  const chassisRef = useRef<HTMLDivElement>(null);
+  const [chassisHeight, setChassisHeight] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!chassisRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      setChassisHeight(entries[0].borderBoxSize?.[0]?.blockSize || entries[0].contentRect.height);
+    });
+    observer.observe(chassisRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -382,7 +394,7 @@ export default function App() {
 
           {/* Radio Chassis */}
           <div className="flex-1 flex flex-col items-center justify-center min-h-[400px]">
-            <div className={`w-full ${T.chassis} rounded-sm p-4 sm:p-6 lg:p-8 shadow-2xl flex flex-col relative overflow-hidden transition-colors duration-500`}>
+            <div ref={chassisRef} className={`w-full ${T.chassis} rounded-sm p-4 sm:p-6 lg:p-8 shadow-2xl flex flex-col relative overflow-hidden transition-colors duration-500`}>
             {/* Grime overlay removed */}
             
             {/* Dial & Frequencies */}
@@ -568,74 +580,72 @@ export default function App() {
              </div>
            </div>
 
-           {/* Current Track Info Header - Designed like a Skill context block */}
-           <div className="mb-4">
-             <div className="flex flex-col font-serif">
-                <span className="text-de-orange font-bold text-2xl tracking-wider leading-tight mb-3 whitespace-pre-line drop-shadow-sm">
-                  {currentTrack.title}
-                </span>
-                <div className="flex flex-col gap-1">
-                  <span className={`${T.rightPanelSub} text-sm tracking-wide flex transition-colors duration-500`}>
-                    <span className="inline-block w-[95px] font-bold shrink-0">[ORIGINAL]</span>
-                    <span className={`${T.rightPanelVal}`}>{currentTrack.artist.replace(/\[?Original\]?\s*/i, '').trim()}</span>
-                  </span>
-                  <span className={`${T.rightPanelSub} text-sm tracking-wide flex transition-colors duration-500`}>
-                    <span className="inline-block w-[95px] font-bold shrink-0 whitespace-pre">[AI  COVER]</span>
-                    <span className={`${T.rightPanelVal}`}>Kim Kitsuragi</span>
-                  </span>
-                </div>
-             </div>
-           </div>
-
-           <div className={`h-px bg-gradient-to-r ${isLight ? 'from-transparent via-[#8c8678] to-transparent' : 'from-transparent via-white/20 to-transparent'} w-full mb-6`} />
-
-           {/* Lyrics Dialogue Stream */}
-           <div className="flex-1 overflow-y-auto scrollbar-de pr-4 pb-24 relative space-y-4">
-              
-              {activeLyrics.length === 0 && (
-                <div className={`${T.lyricSub} italic mt-10`}>信号微弱，未接收到文本数据...</div>
-              )}
-
-              {activeLyrics.map((lyric, idx) => {
-                // If it hasn't played yet, hide it or dim it? Usually DE log keeps history, doesn't show future.
-                // We will only render up to the active lyric
-                if (idx > activeLyricIndex && activeLyricIndex !== -1) return null;
-                // If we haven't started playing anything, maybe show nothing or just the first line dimmed
-                if (activeLyricIndex === -1 && idx > 0) return null;
-
-                const isActive = idx === activeLyricIndex;
-                
-                return (
-                  <div 
-                    key={idx} 
-                    id={`lyric-${idx}`}
-                    className={`flex flex-col gap-1 ${isActive ? 'opacity-100' : 'opacity-70'} transition-opacity duration-500 ease-in-out`}
-                  >
-                     {lyric.time !== undefined && (
-                       <span 
-                         className={`font-bold text-sm tracking-wide cursor-pointer hover:underline ${isActive ? (lyric.speaker === '你' ? T.lyricYouSpeaker : T.lyricOthSpeaker) : T.lyricNorSpeaker}`}
-                         onClick={() => {
-                           if (audioRef.current) audioRef.current.currentTime = lyric.time as number;
-                           setCurrentTime(lyric.time as number);
-                         }}
-                       >
-                         [{formatLrcTime(lyric.time)}]
-                       </span>
-                     )}
-                     <p className={`leading-relaxed italic transition-colors duration-500 ${isActive ? `${T.lyricActiveText} text-lg not-italic font-bold` : T.lyricSub}`}>
-                       {lyric.text}
-                     </p>
-                  </div>
-                );
-              })}
-              <div ref={dialogueEndRef} />
-              
-              {/* Optional: Decorator line moving down */}
-              {activeLyricIndex !== -1 && (
-                 <div className={`absolute left-[-1.5rem] top-0 bottom-0 w-px ${isLight ? 'bg-[#9c9484]' : 'bg-white/10'} hidden md:block`}>
-                    {/* A moving pip indicating current position relative to history could go here */}
+           <div className="flex-1 flex flex-col items-center justify-center min-h-[400px]">
+             <div className="w-full flex flex-col relative" style={{ height: chassisHeight ? `${chassisHeight}px` : '100%' }}>
+               {/* Current Track Info Header - Designed like a Skill context block */}
+               <div className="mb-4">
+                 <div className="flex flex-col font-serif">
+                    <span className="text-de-orange font-bold text-2xl tracking-wider leading-tight mb-3 whitespace-pre-line drop-shadow-sm">
+                      {currentTrack.title}
+                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span className={`${T.rightPanelSub} text-sm tracking-wide flex transition-colors duration-500`}>
+                        <span className="inline-block w-[95px] font-bold shrink-0">[ORIGINAL]</span>
+                        <span className={`${T.rightPanelVal}`}>{currentTrack.artist.replace(/\[?Original\]?\s*/i, '').trim()}</span>
+                      </span>
+                      <span className={`${T.rightPanelSub} text-sm tracking-wide flex transition-colors duration-500`}>
+                        <span className="inline-block w-[95px] font-bold shrink-0 whitespace-pre">[AI  COVER]</span>
+                        <span className={`${T.rightPanelVal}`}>Kim Kitsuragi</span>
+                      </span>
+                    </div>
                  </div>
-              )}
+               </div>
+
+               <div className={`h-px bg-gradient-to-r ${isLight ? 'from-transparent via-[#8c8678] to-transparent' : 'from-transparent via-white/20 to-transparent'} w-full mb-6`} />
+
+               {/* Lyrics Dialogue Stream */}
+               <div className="flex-1 overflow-y-auto scrollbar-de pr-4 pb-2 relative space-y-4">
+                  
+                  {activeLyrics.length === 0 && (
+                    <div className={`${T.lyricSub} italic mt-10`}>信号微弱，未接收到文本数据...</div>
+                  )}
+
+                  {activeLyrics.map((lyric, idx) => {
+                    const isActive = idx === activeLyricIndex;
+                    
+                    return (
+                      <div 
+                        key={idx} 
+                        id={`lyric-${idx}`}
+                        className={`flex flex-col gap-1 ${isActive ? 'opacity-100' : 'opacity-70'} transition-opacity duration-500 ease-in-out`}
+                      >
+                         {lyric.time !== undefined && (
+                           <span 
+                             className={`font-bold text-sm tracking-wide cursor-pointer hover:underline ${isActive ? (lyric.speaker === '你' ? T.lyricYouSpeaker : T.lyricOthSpeaker) : T.lyricNorSpeaker}`}
+                             onClick={() => {
+                               if (audioRef.current) audioRef.current.currentTime = lyric.time as number;
+                               setCurrentTime(lyric.time as number);
+                             }}
+                           >
+                             [{formatLrcTime(lyric.time)}]
+                           </span>
+                         )}
+                         <p className={`leading-relaxed italic transition-colors duration-500 ${isActive ? `${T.lyricActiveText} text-lg not-italic font-bold` : T.lyricSub}`}>
+                           {lyric.text}
+                         </p>
+                      </div>
+                    );
+                  })}
+                  <div ref={dialogueEndRef} />
+                  
+                  {/* Optional: Decorator line moving down */}
+                  {activeLyricIndex !== -1 && (
+                     <div className={`absolute left-[-1.5rem] top-0 bottom-0 w-px ${isLight ? 'bg-[#9c9484]' : 'bg-white/10'} hidden md:block`}>
+                        {/* A moving pip indicating current position relative to history could go here */}
+                     </div>
+                  )}
+               </div>
+             </div>
            </div>
 
            {/* The bottom right specific UI (Like "Continue" button context in DE) */}
