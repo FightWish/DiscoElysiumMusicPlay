@@ -505,7 +505,7 @@ export default function App() {
             </div>
 
             {/* Information & Controls Area */}
-            <div className={`mt-6 pt-4 border-t ${isLight ? 'border-[#b5af9f]' : 'border-[#4a4a4a]'} flex justify-between items-center z-10 relative w-full`}>
+            <div className={`mt-6 pt-4 border-t ${isLight ? 'border-[#b5af9f]' : 'border-[#4a4a4a]'} flex flex-wrap justify-center md:justify-between items-center gap-y-6 z-10 relative w-full`}>
               
               {/* Left side knobs */}
               <div className="flex gap-2 lg:gap-5 px-2 lg:px-4 flex-shrink-0">
@@ -515,7 +515,7 @@ export default function App() {
               </div>
               
               {/* Play Controls - Radio Buttons */}
-              <div className="flex gap-2 justify-end items-center mr-2 lg:mr-8 flex-1">
+              <div className="flex gap-2 justify-center md:justify-end items-center mr-2 lg:mr-8 flex-1 min-w-[260px]">
                 {/* Shuffle & Repeat Buttons (Utility) */}
                 <div className="flex gap-2 mr-2">
                     <button onClick={() => setPlayMode('rand')} className={`w-8 h-8 flex items-center justify-center border-t border-l border-b-2 border-r-2 transition-all active:scale-95 ${playMode === 'rand' ? T.btnRandActive : T.btnRandInactive}`} title="随机播放">
