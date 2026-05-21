@@ -109,36 +109,51 @@ const parseLRC = (lrcString: string): LyricLine[] => {
 
 // --- Components ---
 
-function Knob({ label, value, onChange, isVolume = false, inactive = false }: { label: string, value: number, onChange?: (val: number) => void, isVolume?: boolean, inactive?: boolean }) {
-  const safeValue = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
-  const rotation = inactive ? 45 : (safeValue * 270 - 135);
+function Knob({ label, value, onChange, onChangeStart, onChangeEnd, isVolume = false, inactive = false }: { label: string, value: number, onChange?: (val: number) => void, onChangeStart?: () => void, onChangeEnd?: (val: number) => void, isVolume?: boolean, inactive?: boolean }) {
+  const [internalValue, setInternalValue] = useState<number | null>(null);
+  const displayValue = internalValue !== null ? internalValue : value;
+  const rotation = inactive ? 45 : (displayValue * 270 - 135);
   
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (inactive || !onChange) return;
     
     e.preventDefault();
+    if (onChangeStart) {
+      onChangeStart();
+    }
     
     const startY = e.clientY;
     const startX = e.clientX;
-    const startValue = safeValue;
+    const startValue = displayValue;
     
-    const onMove = (moveEv: PointerEvent) => {
-      moveEv.preventDefault();
-      const deltaY = startY - moveEv.clientY;
-      const deltaX = moveEv.clientX - startX;
+    setInternalValue(startValue);
+    
+    let lastVal = startValue;
+    
+    const onMove = (eMove: PointerEvent) => {
+      const deltaY = startY - eMove.clientY;
+      const deltaX = eMove.clientX - startX;
+      // Faster response for knob
       const delta = (deltaY + deltaX) * 0.005; 
-      onChange(Math.max(0, Math.min(1, startValue + delta)));
+      const currentVal = Math.max(0, Math.min(1, startValue + delta));
+      lastVal = currentVal;
+      setInternalValue(currentVal);
+      onChange(currentVal);
     };
     
-    const onUp = () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      window.removeEventListener('pointercancel', onUp);
+    const onUp = (eUp: PointerEvent) => {
+      window.removeEventListener('pointermove', onMove as EventListener);
+      window.removeEventListener('pointerup', onUp as EventListener);
+      window.removeEventListener('pointercancel', onUp as EventListener);
+      setInternalValue(null);
+      if (onChangeEnd) {
+        onChangeEnd(lastVal);
+      }
     };
     
-    window.addEventListener('pointermove', onMove, { passive: false });
-    window.addEventListener('pointerup', onUp, { once: true });
-    window.addEventListener('pointercancel', onUp, { once: true });
+    window.addEventListener('pointermove', onMove as EventListener);
+    window.addEventListener('pointerup', onUp as EventListener);
+    window.addEventListener('pointercancel', onUp as EventListener);
   };
 
   return (
@@ -169,7 +184,7 @@ export default function App() {
   const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(true);
   
   const audioRef = useRef<HTMLAudioElement>(null);
-  const progressRef = useRef<HTMLDivElement>(null);
+  const isTuningRef = useRef(false);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -179,9 +194,6 @@ export default function App() {
   
   const currentTrack = PLAYLIST[currentTrackIdx];
   const activeLyrics = parseLRC(currentTrack.lrc);
-  const progressRatio = Number.isFinite(duration) && duration > 0
-    ? Math.max(0, Math.min(1, currentTime / duration))
-    : 0;
 
   const formatTime = (time: number) => {
     if (isNaN(time) || !isFinite(time)) return "00:00";
@@ -200,7 +212,7 @@ export default function App() {
 
   // Audio Event Handlers
   const handleTimeUpdate = () => {
-    if (audioRef.current) {
+    if (audioRef.current && !isTuningRef.current) {
       setCurrentTime(audioRef.current.currentTime);
     }
   };
@@ -211,55 +223,7 @@ export default function App() {
     }
   };
 
-  const seekToRatio = (ratio: number) => {
-    if (!Number.isFinite(duration) || duration <= 0) return;
 
-    const clampedRatio = Math.max(0, Math.min(1, ratio));
-    const newTime = clampedRatio * duration;
-    if (audioRef.current) audioRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
-  };
-
-  const handleProgressPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!progressRef.current || !Number.isFinite(duration) || duration <= 0) return;
-
-    e.preventDefault();
-
-    const updateFromClientX = (clientX: number) => {
-      if (!progressRef.current) return;
-      const rect = progressRef.current.getBoundingClientRect();
-      if (rect.width <= 0) return;
-      seekToRatio((clientX - rect.left) / rect.width);
-    };
-
-    const onMove = (moveEv: PointerEvent) => {
-      moveEv.preventDefault();
-      updateFromClientX(moveEv.clientX);
-    };
-
-    const onUp = () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      window.removeEventListener('pointercancel', onUp);
-    };
-
-    updateFromClientX(e.clientX);
-    window.addEventListener('pointermove', onMove, { passive: false });
-    window.addEventListener('pointerup', onUp, { once: true });
-    window.addEventListener('pointercancel', onUp, { once: true });
-  };
-
-  const handleProgressKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      seekToRatio(progressRatio - 0.02);
-    }
-
-    if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      seekToRatio(progressRatio + 0.02);
-    }
-  };
 
   const handleTrackEnded = () => {
     if (playMode === 'rand') {
@@ -400,29 +364,38 @@ export default function App() {
                 <div className="flex justify-between items-center text-de-muted font-oswald text-xs gap-[2px] opacity-70 w-full relative">
                   <span className="w-10">{formatTime(currentTime)}</span>
                   {/* Tick marks container */}
-                  <div
-                    ref={progressRef}
-                    onPointerDown={handleProgressPointerDown}
-                    onKeyDown={handleProgressKeyDown}
-                    className="flex-1 h-8 -my-2 relative flex items-center justify-between px-2 cursor-ew-resize touch-none"
-                    role="slider"
-                    aria-label="Playback progress"
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={Math.round(progressRatio * 100)}
-                    tabIndex={0}
-                  >
+                  <div className="flex-1 h-4 relative flex items-center justify-between px-2">
                     {[...Array(12)].map((_, i) => <div key={i} className="w-[1px] h-2 bg-de-muted/30" />)}
                     {/* Active needle for progress */}
                     <span 
                       className="absolute top-[-0.5rem] h-[2rem] w-[3px] bg-white/90 shadow-[0_0_5px_rgba(255,255,255,0.5)] z-10 pointer-events-none flex flex-col justify-end items-center" 
-                      style={{ left: `calc(8px + ${progressRatio * 100}% - 4px)`, transform: 'translateX(-50%)' }}
+                      style={{ left: `calc(8px + ${duration ? (currentTime / duration) * 100 : 0}% - 4px)`, transform: 'translateX(-50%)' }}
                     >
                       <span className="h-2 w-[6px] bg-white absolute bottom-[-4px]" />
                     </span>
                   </div>
                   <span className="w-10 text-right">{formatTime(duration)}</span>
                 </div>
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="100" 
+                  step="any"
+                  value={duration ? (currentTime / duration) * 100 : 0} 
+                  onPointerDown={() => { isTuningRef.current = true; }}
+                  onChange={(e) => {
+                    const newTime = (Number(e.target.value) / 100) * duration;
+                    setCurrentTime(newTime);
+                  }}
+                  onPointerUp={(e) => {
+                    const newTime = (Number(e.currentTarget.value) / 100) * duration;
+                    if (audioRef.current) audioRef.current.currentTime = newTime;
+                    setTimeout(() => {
+                      isTuningRef.current = false;
+                    }, 100);
+                  }}
+                  className="absolute bottom-[-10px] left-10 right-10 h-8 opacity-0 cursor-ew-resize z-20"
+                />
               </div>
             </div>
 
@@ -468,7 +441,22 @@ export default function App() {
               {/* Left side knobs */}
               <div className="flex gap-4 lg:gap-8 px-2 lg:px-4 flex-shrink-0">
                 <Knob label="音 量" value={volume} onChange={(v) => setVolume(v)} isVolume />
-                <Knob label="调 谐" value={progressRatio} onChange={seekToRatio} />
+                <Knob 
+                  label="调 谐" 
+                  value={duration ? currentTime / duration : 0} 
+                  onChangeStart={() => {
+                    isTuningRef.current = true;
+                  }}
+                  onChange={(v) => {
+                    const newTime = v * duration;
+                    setCurrentTime(newTime);
+                  }} 
+                  onChangeEnd={(v) => {
+                    const newTime = v * duration;
+                    if (audioRef.current) audioRef.current.currentTime = newTime;
+                    isTuningRef.current = false;
+                  }} 
+                />
                 <Knob label="调 频" value={0.1} inactive />
               </div>
               
@@ -594,3 +582,4 @@ export default function App() {
     </div>
   );
 }
+
