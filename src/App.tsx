@@ -528,16 +528,16 @@ export default function App() {
 
                 {/* Primary Media Buttons (Hardware aesthetic) */}
                 <div className={`flex gap-1 ml-2 p-1 rounded-sm shadow-inner border ${T.playBtnWrap}`}>
-                  <button onClick={() => playIndex((currentTrackIdx - 1 + PLAYLIST.length) % PLAYLIST.length)} className={`w-10 h-10 border-t border-l border-b-2 border-r-2 flex items-center justify-center transition-all outline-none active:scale-95 ${T.playSecondary}`} title="上一首">
-                    <SkipBack size={18} fill="currentColor" />
+                  <button onClick={() => playIndex((currentTrackIdx - 1 + PLAYLIST.length) % PLAYLIST.length)} className={`w-12 h-12 border-t border-l border-b-2 border-r-2 flex items-center justify-center transition-all outline-none active:scale-95 ${T.playSecondary}`} title="上一首">
+                    <SkipBack size={20} fill="currentColor" />
                   </button>
                   
                   <button onClick={togglePlay} className={`w-12 h-12 border-t border-l border-b-[3px] border-r-[3px] flex items-center justify-center transition-all active:scale-95 shadow-lg outline-none ${isPlaying ? T.playActive : T.playInactive}`} title={isPlaying ? "暂停" : "播放"}>
                     {isPlaying ? <Pause size={22} fill="currentColor"/> : <Play size={22} fill="currentColor" />}
                   </button>
 
-                  <button onClick={handleTrackEnded} className={`w-10 h-10 border-t border-l border-b-2 border-r-2 flex items-center justify-center transition-all outline-none active:scale-95 ${T.playSecondary}`} title="下一首">
-                    <SkipForward size={18} fill="currentColor" />
+                  <button onClick={handleTrackEnded} className={`w-12 h-12 border-t border-l border-b-2 border-r-2 flex items-center justify-center transition-all outline-none active:scale-95 ${T.playSecondary}`} title="下一首">
+                    <SkipForward size={20} fill="currentColor" />
                   </button>
                 </div>
               </div>
