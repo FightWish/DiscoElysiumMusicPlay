@@ -552,7 +552,7 @@ export default function App() {
             </div>
             
             {/* Theme Switch (Bottom right) */}
-            <div className="absolute bottom-4 right-4 flex items-center gap-3">
+            <div className="absolute bottom-4 right-4 flex items-center gap-3 z-50">
               <button 
                 onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
                 className={`w-8 h-4 relative transition-colors duration-500 cursor-pointer active:scale-95 shadow-inner border-t border-b overflow-hidden rounded-sm ${isLight ? 'bg-[#618029] border-[#899c75] border-b-[#354518]' : 'bg-[#444] border-[#222] border-t-white/30 border-b-black/80'}`}
