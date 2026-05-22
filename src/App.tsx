@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Star, Download, X } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Star, Download, X } from 'lucide-react';
 import defaultPlaylist from '../playlist.json';
+// import defaultPlaylist from '../playlist.json';
 
 // --- Types & Data ---
 
@@ -20,13 +21,20 @@ interface Track {
   id: string;
   title: string;
   artist: string;
+  originalLabel?: string;
+  coverLabel?: string;
+  coverArtist?: string;
   album: string;
+  albumFreq?: string;
+  albumColor?: string;
   cover: string;
   audioUrl: string;
   lrc: string;
 }
 
 const PLAYLIST_URL = 'https://kimkitsuragi.oss-cn-hangzhou.aliyuncs.com/svc_done/playlist.json';
+// import localPlaylistUrl from '../playlist.json?url';
+// const PLAYLIST_URL = localPlaylistUrl;
 
 // We'll keep a fallback so the app doesn't crash before loading
 let FALLBACK_PLAYLIST: Track[] = defaultPlaylist as Track[];
@@ -119,6 +127,8 @@ function Knob({ label, value, onChange, isVolume = false, inactive = false, isLi
 
 
 export default function App() {
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(() => localStorage.getItem('kimai_warning_accepted') === 'true');
+  const [hasDeclined, setHasDeclined] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [currentTrackIdx, setCurrentTrackIdx] = useState(0);
 
@@ -154,13 +164,26 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(1);
-  const [volume, setVolume] = useState(0.8);
-  const [playMode, setPlayMode] = useState<'seq' | 'rand'>('seq');
+  const [volume, setVolume] = useState(1);
+  const [playMode, setPlayMode] = useState<'seq' | 'rand' | 'loop'>('seq');
   const [now, setNow] = useState(new Date());
-  const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(true);
+  const [expandedAlbums, setExpandedAlbums] = useState<Record<string, boolean>>({'狂飙怪人.FM': true, '悲伤FM': false});
+  const [starredAlbums, setStarredAlbums] = useState<Record<string, boolean>>({'狂飙怪人.FM': true});
   const [isTapeModalOpen, setIsTapeModalOpen] = useState(false);
+  const [countdown, setCountdown] = useState(5);
   
+  const toggleAlbum = (album: string) => {
+    setExpandedAlbums(prev => ({ ...prev, [album]: !prev[album] }));
+  };
+
+  const toggleStar = (e: React.MouseEvent, album: string) => {
+    e.stopPropagation();
+    if (album === '狂飙怪人.FM') return;
+    setStarredAlbums(prev => ({ ...prev, [album]: !prev[album] }));
+  };
+
   const audioRef = useRef<HTMLAudioElement>(null);
+
   const progressRef = useRef<HTMLDivElement>(null);
   const chassisRef = useRef<HTMLDivElement>(null);
   const [chassisHeight, setChassisHeight] = useState<number | undefined>(undefined);
@@ -178,9 +201,39 @@ export default function App() {
     const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!hasAcceptedTerms && countdown > 0) {
+      const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [hasAcceptedTerms, countdown]);
   const [playlist, setPlaylist] = useState<Track[]>(FALLBACK_PLAYLIST);
   const [isLoadingPlaylist, setIsLoadingPlaylist] = useState(true);
   const [playlistError, setPlaylistError] = useState('');
+
+  // --- Compute Albums ---
+  const groupedPlaylist = useMemo(() => {
+    return playlist.reduce((acc, track, i) => {
+      const album = track.album || '未知电台';
+      if (!acc[album]) {
+        acc[album] = { 
+          tracks: [], 
+          freq: track.albumFreq || '??.?', 
+          color: track.albumColor || 'text-[#b0351b]' 
+        };
+      }
+      acc[album].tracks.push({track, index: i});
+      return acc;
+    }, {} as Record<string, { tracks: {track: Track, index: number}[], freq: string, color: string }>);
+  }, [playlist]);
+
+  const sortedAlbums = useMemo(() => Object.keys(groupedPlaylist), [groupedPlaylist]);
+  const currentAlbum = playlist[currentTrackIdx]?.album || '未知电台';
+  const currentFreq = groupedPlaylist[currentAlbum]?.freq || '0';
+  const currentFreqNumber = parseFloat(currentFreq) || 76;
+  const currentAlbumIndex = sortedAlbums.indexOf(currentAlbum);
+
 
   useEffect(() => {
     let active = true;
@@ -206,7 +259,7 @@ export default function App() {
     return () => { active = false; };
   }, []);
 
-  const dialogueEndRef = useRef<HTMLDivElement>(null);
+  const lyricsContainerRef = useRef<HTMLDivElement>(null);
   
   const currentTrack = playlist[currentTrackIdx] || FALLBACK_PLAYLIST[0];
   const [activeLyrics, setActiveLyrics] = useState<LyricLine[]>([]);
@@ -319,14 +372,66 @@ export default function App() {
     }
   };
 
-  const handleTrackEnded = () => {
-    if (playMode === 'rand') {
-      let nextIdx = Math.floor(Math.random() * playlist.length);
-      if (nextIdx === currentTrackIdx) nextIdx = (nextIdx + 1) % playlist.length;
-      setCurrentTrackIdx(nextIdx);
-    } else {
-      setCurrentTrackIdx((prev) => (prev + 1) % playlist.length);
+  const handleFreqChange = (v: number) => {
+    if (sortedAlbums.length <= 1) return;
+    
+    // Map knob value (0-1) to frequency (76 - 108)
+    const dragFreq = 76 + v * (108 - 76);
+    
+    let nearestIdx = 0;
+    let minDiff = Infinity;
+    
+    sortedAlbums.forEach((album, idx) => {
+       const freqStr = groupedPlaylist[album]?.freq || '76';
+       const freqNumber = parseFloat(freqStr) || 76;
+       const diff = Math.abs(freqNumber - dragFreq);
+       if (diff < minDiff) {
+         minDiff = diff;
+         nearestIdx = idx;
+       }
+    });
+
+    if (nearestIdx !== currentAlbumIndex) {
+      const album = sortedAlbums[nearestIdx];
+      const tracks = groupedPlaylist[album]?.tracks;
+      if (tracks && tracks.length > 0) {
+        setCurrentTrackIdx(tracks[0].index);
+      }
     }
+  };
+
+  const handleTrackEnded = () => {
+    if (playMode === 'loop') {
+      audioRef.current!.currentTime = 0;
+      audioRef.current!.play().catch(e => console.error("Play failed", e));
+      return;
+    }
+
+    const currentAlbum = playlist[currentTrackIdx]?.album || '未知电台';
+    const albumTracks = playlist.map((t, idx) => ({t, idx})).filter(x => (x.t.album || '未知电台') === currentAlbum);
+    
+    if (playMode === 'rand') {
+      let nextTrackIndex = currentTrackIdx;
+      if (albumTracks.length > 1) {
+          while (nextTrackIndex === currentTrackIdx) {
+              const randIdx = Math.floor(Math.random() * albumTracks.length);
+              nextTrackIndex = albumTracks[randIdx].idx;
+          }
+      }
+      setCurrentTrackIdx(nextTrackIndex);
+    } else {
+      const currentInAlbumIdx = albumTracks.findIndex(x => x.idx === currentTrackIdx);
+      const nextInAlbumIdx = (currentInAlbumIdx + 1) % albumTracks.length;
+      setCurrentTrackIdx(albumTracks[nextInAlbumIdx].idx);
+    }
+  };
+
+  const handlePrevTrack = () => {
+    const currentAlbum = playlist[currentTrackIdx]?.album || '未知电台';
+    const albumTracks = playlist.map((t, idx) => ({t, idx})).filter(x => (x.t.album || '未知电台') === currentAlbum);
+    const currentInAlbumIdx = albumTracks.findIndex(x => x.idx === currentTrackIdx);
+    const prevInAlbumIdx = (currentInAlbumIdx - 1 + albumTracks.length) % albumTracks.length;
+    setCurrentTrackIdx(albumTracks[prevInAlbumIdx].idx);
   };
 
   const togglePlay = () => {
@@ -372,14 +477,67 @@ export default function App() {
 
   // Auto-scroll dialogue
   useEffect(() => {
-    // Scroll small amount just enough to keep the active item near bottom
-    if (dialogueEndRef.current && activeLyricIndex !== -1) {
+    if (lyricsContainerRef.current && activeLyricIndex !== -1) {
       const activeEl = document.getElementById(`lyric-${activeLyricIndex}`);
-      if (activeEl) {
-        activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const container = lyricsContainerRef.current;
+      if (activeEl && container) {
+        const targetScrollTop = activeEl.offsetTop - (container.clientHeight / 2) + (activeEl.clientHeight / 2);
+        container.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
       }
     }
   }, [activeLyricIndex]);
+
+  if (hasDeclined) {
+    return (
+      <div className={`min-h-[100dvh] md:h-screen ${T.bg} font-serif flex items-center justify-center p-4 selection:bg-de-orange selection:text-white select-none transition-colors duration-500 overflow-hidden`}>
+         <div className="text-center opacity-50">
+            已关闭
+         </div>
+      </div>
+    );
+  }
+
+  if (!hasAcceptedTerms) {
+    return (
+      <div className={`min-h-[100dvh] md:h-screen ${T.bg} font-serif flex items-center justify-center p-4 selection:bg-de-orange selection:text-white select-none transition-colors duration-500 overflow-hidden`}>
+        <div className={`max-w-2xl w-full p-8 md:p-12 border-2 ${isLight ? 'bg-[#e8e4db] border-[#b5af9f]' : 'bg-[#121417] border-[#3a3d45]'} tracking-wider leading-relaxed shadow-2xl rounded-sm`}>
+          <h1 className="text-xl md:text-3xl font-bold mb-8 text-center text-[#b0351b]">
+            【内容预警与入站须知】
+          </h1>
+          
+          <div className="text-sm md:text-base space-y-4 mb-10 opacity-90">
+            <div className="mt-8 text-center font-bold space-y-1">
+              <p>本网站包含由 <span className="inline-block text-[#b0351b] text-xl font-bold tracking-wider mx-1">AI 音声模型训练</span> 与 <span className="inline-block text-[#b0351b] text-xl font-bold tracking-wider mx-1">AI 声音替换技术</span></p>
+              <p>制作的「金·曷城」相关音频。</p>
+            </div>
+            <p className="flex items-center font-bold text-[#b0351b] text-xl mt-6"><span className="mr-2 text-2xl drop-shadow-sm">⚠️</span>请注意：</p>
+            <p className="pl-6 border-l-2 border-[#b0351b]/30">所有音频均为技术合成的二次创作，并非声优本人真实演唱或录音。内容仅供圈内交流、学习与娱乐，请勿当真，严禁用于任何商业或非法用途。</p>
+            <p className="mt-8 text-center font-bold text-[#b0351b] text-lg sm:text-lg p-3 bg-[#b0351b]/10 rounded border-y-2 border-[#b0351b]/30">请确认您已完全了解并能够接受此类 AI 生成内容。</p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button 
+              onClick={() => {
+                if (countdown > 0) return;
+                setHasAcceptedTerms(true);
+                localStorage.setItem('kimai_warning_accepted', 'true');
+              }}
+              disabled={countdown > 0}
+              className={`flex-1 flex items-center justify-center sm:flex-none uppercase tracking-widest px-6 py-4 border-2 ${isLight ? 'border-[#b5af9f] text-[#2a2b25]' : 'border-[#3a3d45] text-de-text'} transition-all font-bold ${countdown > 0 ? 'opacity-50 cursor-not-allowed' : (isLight ? 'hover:bg-[#b5af9f]/10 active:scale-[0.98]' : 'hover:bg-[#3a3d45]/30 active:scale-[0.98]')}`}
+            >
+              {countdown > 0 ? `[阅读须知并等待 ${countdown} 秒]` : '[我已了解并接受，进入网站]'}
+            </button>
+            <button 
+              onClick={() => setHasDeclined(true)}
+              className={`flex-1 flex items-center justify-center sm:flex-none uppercase tracking-widest px-6 py-4 border-2 ${isLight ? 'border-[#b5af9f] text-[#2a2b25] hover:bg-[#b5af9f]/10' : 'border-[#3a3d45] text-de-text hover:bg-[#3a3d45]/30'} transition-all active:scale-[0.98] font-bold`}
+            >
+              [我不能接受，关闭网站]
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -423,21 +581,27 @@ export default function App() {
               <div className={`flex justify-between items-end border-b pb-4 relative z-10 ${isLight ? 'border-[#b5af9f]' : 'border-[#2a2c31]'}`}>
                 <div className="flex flex-col shrink-0">
                   <span className="text-[10px] uppercase text-[#b0351b] font-sans font-bold tracking-tighter whitespace-nowrap">Frequency</span>
-                  <span className={`text-5xl font-mono tracking-tighter transition-colors ${T.freqText} whitespace-nowrap`}>78.9<span className="text-xl">FM</span></span>
+                  <span className={`text-5xl font-mono tracking-tighter transition-colors ${T.freqText} whitespace-nowrap`}>{currentFreq}<span className="text-xl">FM</span></span>
                 </div>
                 
                 {/* Visual Dial (FM marks) */}
                 <div className="flex-1 mx-6 mb-[1.1rem]">
                   <div className={`flex items-center ${isLight ? 'text-[#899c75]' : 'text-de-muted'} font-oswald text-xs opacity-70 w-full relative`}>
-                    <span className="shrink-0">88</span>
+                    <span className="shrink-0">76</span>
                     <span className={`flex-1 mx-3 min-w-[40px] h-[1px] ${isLight ? 'bg-[#899c75]' : 'bg-de-muted'} relative flex justify-between items-center`}>
                        {[...Array(31)].map((_, i) => (
                           <span key={i} className={`${T.fmMark} ${i % 5 === 0 ? 'h-4 w-[2px]' : 'h-2 w-[1px]'}`} />
                        ))}
                        
-                       {/* Active needle for FM (locked at ~10% for 78.9) */}
-                       <span className="absolute left-[10%] top-1/2 -translate-y-1/2 -ml-[1.5px] h-[2.5rem] w-[3px] bg-[#b0351b]/90 shadow-[0_0_5px_rgba(176,53,27,0.5)] z-10 pointer-events-none" />
-                       <span className="absolute left-[10%] top-1/2 -translate-y-[60%] -ml-[3px] h-3 w-[6px] bg-[#b0351b] pointer-events-none" />
+                       {/* Active needle for FM */}
+                       <span 
+                         className="absolute top-1/2 -translate-y-1/2 -ml-[1.5px] h-[2.5rem] w-[3px] bg-[#b0351b]/90 shadow-[0_0_5px_rgba(176,53,27,0.5)] z-10 pointer-events-none transition-all duration-1000 ease-in-out" 
+                         style={{ left: `${Math.max(0, Math.min(100, (currentFreqNumber - 76) / (108 - 76) * 100))}%` }}
+                       />
+                       <span 
+                         className="absolute top-1/2 -translate-y-[60%] -ml-[3px] h-3 w-[6px] bg-[#b0351b] pointer-events-none transition-all duration-1000 ease-in-out" 
+                         style={{ left: `${Math.max(0, Math.min(100, (currentFreqNumber - 76) / (108 - 76) * 100))}%` }}
+                       />
                     </span>
                     <span className="shrink-0">108</span>
                   </div>
@@ -488,87 +652,127 @@ export default function App() {
 
             {/* Playlist (Frequency selector) */}
             <div className="flex-1 max-h-48 flex flex-col gap-1 overflow-y-auto scrollbar-de pr-2 z-10 relative mt-4 pt-2">
-              <button 
-                onClick={() => setIsPlaylistExpanded(!isPlaylistExpanded)}
-                className={`w-full text-left flex items-center justify-between px-2 py-[4px] font-serif transition-colors font-black ${T.playlistHeader}`}
-              >
-                <div className="flex gap-4 items-center">
-                  <span className="font-oswald w-10 text-[#b0351b]">78.9</span>
-                  <span className="tracking-widest flex items-center gap-2">狂飙怪人.FM <Star size={14} className="fill-current text-[#b0351b]" /></span>
-                </div>
-                <span className="text-sm">{isPlaylistExpanded ? '▼' : '▶'}</span>
-              </button>
-
-              {isPlaylistExpanded && isLoadingPlaylist && (
+              
+              {isLoadingPlaylist && (
                 <div className={`w-full text-center py-[10px] font-serif text-sm ${T.playlistItemInactive}`}>
                   数据加载中...
                 </div>
               )}
-              {isPlaylistExpanded && playlistError && (
+              {playlistError && (
                 <div className="w-full text-center py-[10px] font-serif text-sm text-[#b0351b]">
                   {playlistError}
                 </div>
               )}
-              {isPlaylistExpanded && !isLoadingPlaylist && playlist.map((track, i) => {
-                const isActive = i === currentTrackIdx;
-                return (
-                  <button 
-                    key={track.id}
-                    onClick={() => playIndex(i)}
-                    className={`w-full text-left flex items-center justify-between px-2 py-[4px] font-serif transition-colors pl-8 ${isActive ? T.playlistItemActive : T.playlistItemInactive}`}
-                  >
-                    <div className="flex gap-4 items-center">
-                      <span className={`font-oswald w-6 ${isActive ? T.playlistNumActive : T.playlistNumInactive}`}>{(i+1).toString().padStart(2, '0')}</span>
-                      <span className="tracking-widest text-sm">{track.title}</span>
+
+              {!isLoadingPlaylist && (
+                <>
+                  {(() => {
+                    return sortedAlbums.map(album => {
+                       const expanded = expandedAlbums[album] !== false; // default to true if not explicitly set
+                       const { tracks, freq, color: colorClass } = groupedPlaylist[album];
+                       
+                       return (
+                         <div key={album} className="flex flex-col gap-1">
+                           <button 
+                             onClick={() => toggleAlbum(album)}
+                             className={`w-full text-left flex items-center justify-between px-2 py-[4px] font-serif transition-colors font-black ${T.playlistHeader} ${album !== sortedAlbums[0] ? 'mt-2' : ''}`}
+                           >
+                             <div className="flex gap-4 items-center">
+                               <span className={`font-oswald w-10 ${colorClass}`}>{freq}</span>
+                               <span className="tracking-widest flex items-center gap-2">
+                                 {album}
+                                 <span onClick={(e) => toggleStar(e, album)} className="outline-none flex items-center cursor-pointer">
+                                   <Star size={14} className={`${starredAlbums[album] ? 'fill-current' : ''} ${colorClass} transition-colors`} />
+                                 </span>
+                               </span>
+                             </div>
+                             <span className="text-sm">{expanded ? '▼' : '▶'}</span>
+                           </button>
+
+                           {expanded && tracks.map(({track, index}, i) => {
+                             const isActive = index === currentTrackIdx;
+                             return (
+                               <button 
+                                 key={track.id}
+                                 onClick={() => playIndex(index)}
+                                 className={`w-full text-left flex items-center justify-between px-2 py-[4px] font-serif transition-colors pl-8 ${isActive ? T.playlistItemActive : T.playlistItemInactive}`}
+                               >
+                                 <div className="flex gap-4 items-center">
+                                   <span className={`font-oswald w-6 ${isActive ? colorClass : T.playlistNumInactive}`}>{(i+1).toString().padStart(2, '0')}</span>
+                                   <span className="tracking-widest text-sm">{track.title}</span>
+                                 </div>
+                               </button>
+                             );
+                           })}
+                           {expanded && tracks.length === 0 && (
+                              <div className="w-full text-left flex items-center gap-4 px-2 py-[4px] font-serif text-de-muted/80 pl-8">
+                                <span className="tracking-widest text-sm italic">暂无频率信号...</span>
+                              </div>
+                           )}
+                         </div>
+                       );
+                    });
+                  })()}
+                  
+                  {[...Array(5)].map((_, i) => (
+                    <div key={`noise-${i}`} className="w-full text-left flex items-center gap-4 px-2 py-[4px] font-serif text-de-muted/40 cursor-not-allowed">
+                      <span className="font-oswald w-10 text-center">??</span>
+                      <span className="tracking-widest">未知电台静电噪音</span>
                     </div>
-                  </button>
-                );
-              })}
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="w-full text-left flex items-center gap-4 px-2 py-[4px] font-serif text-de-muted/40 cursor-not-allowed">
-                  <span className="font-oswald w-10 text-center">??</span>
-                  <span className="tracking-widest">未知电台静电噪音</span>
-                </div>
-              ))}
+                  ))}
+                </>
+              )}
             </div>
 
             {/* Information & Controls Area */}
-            <div className={`mt-6 pt-4 border-t ${isLight ? 'border-[#b5af9f]' : 'border-[#4a4a4a]'} flex flex-wrap justify-center md:justify-between items-center gap-y-6 z-10 relative w-full`}>
+            <div className={`mt-6 pt-4 border-t ${isLight ? 'border-[#b5af9f]' : 'border-[#4a4a4a]'} flex flex-wrap justify-center md:justify-between items-start gap-y-6 z-10 relative w-full`}>
               
               {/* Left side knobs */}
               <div className="flex gap-2 lg:gap-5 px-2 lg:px-4 flex-shrink-0">
                 <Knob label="音 量" value={volume} onChange={(v) => setVolume(v)} isVolume isLight={isLight} />
                 <Knob label="调 谐" value={progressRatio} onChange={seekToRatio} isLight={isLight} />
-                <Knob label="调 频" value={0.1} inactive isLight={isLight} />
+                <Knob 
+                  label="调 频" 
+                  value={(currentFreqNumber - 76) / (108 - 76)} 
+                  onChange={handleFreqChange} 
+                  isLight={isLight} 
+                />
               </div>
               
               {/* Play Controls - Radio Buttons */}
-              <div className="flex gap-2 justify-center md:justify-end items-center mr-2 lg:mr-8 flex-1 min-w-[260px]">
-                {/* Shuffle & Repeat Buttons (Utility) */}
-                <div className="flex gap-2 mr-2">
+              <div className="flex flex-col gap-1.5 justify-center md:items-end items-center mr-2 lg:mr-8 flex-1 min-w-[260px]">
+                {/* Utility Row */}
+                <div className="flex w-[155px] justify-between items-center mt-2 px-1">
                     <button onClick={() => setIsTapeModalOpen(true)} className={`w-8 h-8 flex items-center justify-center border-t border-l border-b-2 border-r-2 transition-all active:scale-95 ${T.btnRandInactive}`} title="弹出磁带">
                       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="rotate-180"><path d="M12 4l-8 10h16z"/><path d="M4 18h16v2H4z"/></svg>
                     </button>
-                    <button onClick={() => setPlayMode('rand')} className={`w-8 h-8 flex items-center justify-center border-t border-l border-b-2 border-r-2 transition-all active:scale-95 ${playMode === 'rand' ? T.btnRandActive : T.btnRandInactive}`} title="随机播放">
-                      <Shuffle size={14} />
-                    </button>
-                    <button onClick={() => setPlayMode('seq')} className={`w-8 h-8 flex items-center justify-center border-t border-l border-b-2 border-r-2 transition-all active:scale-95 ${playMode === 'seq' ? T.btnRandActive : T.btnRandInactive}`} title="顺序播放">
-                      <Repeat size={14} />
-                    </button>
+
+                    {/* Play Mode Buttons */}
+                    <div className="flex gap-[2px]">
+                       <button onClick={() => setPlayMode('rand')} className={`w-8 h-8 flex items-center justify-center border-t border-l transition-all outline-none ${playMode === 'rand' ? 'border-b border-r translate-x-[1px] translate-y-[1px] ' + T.btnRandActive : 'border-b-2 border-r-2 active:scale-95 ' + T.btnRandInactive}`} title="随机播放">
+                         <Shuffle size={14} />
+                       </button>
+                       <button onClick={() => setPlayMode('seq')} className={`w-8 h-8 flex items-center justify-center border-t border-l transition-all outline-none ${playMode === 'seq' ? 'border-b border-r translate-x-[1px] translate-y-[1px] ' + T.btnRandActive : 'border-b-2 border-r-2 active:scale-95 ' + T.btnRandInactive}`} title="列表循环">
+                         <Repeat size={14} />
+                       </button>
+                       <button onClick={() => setPlayMode('loop')} className={`w-8 h-8 flex items-center justify-center border-t border-l transition-all outline-none ${playMode === 'loop' ? 'border-b border-r translate-x-[1px] translate-y-[1px] ' + T.btnRandActive : 'border-b-2 border-r-2 active:scale-95 ' + T.btnRandInactive}`} title="单曲循环">
+                         <Repeat1 size={14} />
+                       </button>
+                    </div>
                 </div>
 
                 {/* Primary Media Buttons (Hardware aesthetic) */}
-                <div className={`flex gap-1 ml-2 p-1 rounded-sm shadow-inner border ${T.playBtnWrap}`}>
-                  <button onClick={() => playIndex((currentTrackIdx - 1 + playlist.length) % playlist.length)} className={`w-12 h-12 border-t border-l border-b-2 border-r-2 flex items-center justify-center transition-all outline-none active:scale-95 ${T.playSecondary}`} title="上一首">
-                    <SkipBack size={20} fill="currentColor" />
+                <div className={`flex justify-between gap-1 p-1 rounded-sm shadow-inner border w-[155px] ${T.playBtnWrap}`}>
+                  <button onClick={handlePrevTrack} className={`w-[42px] h-8 border-t border-l border-b-2 border-r-2 flex items-center justify-center transition-all outline-none active:scale-95 ${T.playSecondary}`} title="上一首">
+                    <SkipBack size={16} fill="currentColor" />
                   </button>
                   
-                  <button onClick={togglePlay} className={`w-12 h-12 border-t border-l border-b-[3px] border-r-[3px] flex items-center justify-center transition-all active:scale-95 shadow-lg outline-none ${isPlaying ? T.playActive : T.playInactive}`} title={isPlaying ? "暂停" : "播放"}>
-                    {isPlaying ? <Pause size={22} fill="currentColor"/> : <Play size={22} fill="currentColor" />}
+                  <button onClick={togglePlay} className={`w-[53px] h-8 border-t border-l border-b-[3px] border-r-[3px] flex items-center justify-center transition-all active:scale-95 shadow-lg outline-none ${isPlaying ? T.playActive : T.playInactive}`} title={isPlaying ? "暂停" : "播放"}>
+                    {isPlaying ? <Pause size={18} fill="currentColor"/> : <Play size={18} fill="currentColor" />}
                   </button>
 
-                  <button onClick={handleTrackEnded} className={`w-12 h-12 border-t border-l border-b-2 border-r-2 flex items-center justify-center transition-all outline-none active:scale-95 ${T.playSecondary}`} title="下一首">
-                    <SkipForward size={20} fill="currentColor" />
+                  <button onClick={handleTrackEnded} className={`w-[42px] h-8 border-t border-l border-b-2 border-r-2 flex items-center justify-center transition-all outline-none active:scale-95 ${T.playSecondary}`} title="下一首">
+                    <SkipForward size={16} fill="currentColor" />
                   </button>
                 </div>
               </div>
@@ -616,18 +820,20 @@ export default function App() {
                {/* Current Track Info Header - Designed like a Skill context block */}
                <div className="mb-4">
                  <div className="flex flex-col font-serif">
-                    <span className="text-de-orange font-bold text-2xl tracking-wider leading-tight mb-3 whitespace-pre-line drop-shadow-sm">
+                    <span className={`${groupedPlaylist[currentAlbum]?.color || 'text-de-orange'} font-bold text-2xl tracking-wider leading-tight mb-3 whitespace-pre-line drop-shadow-sm transition-colors duration-500`}>
                       {currentTrack.title}
                     </span>
                     <div className="flex flex-col gap-1">
                       <span className={`${T.rightPanelSub} text-sm tracking-wide flex transition-colors duration-500`}>
-                        <span className="inline-block w-[95px] font-bold shrink-0">[ORIGINAL]</span>
-                        <span className={`${T.rightPanelVal}`}>{currentTrack.artist.replace(/\[?Original\]?\s*/i, '').trim()}</span>
+                        <span className="inline-block w-[95px] font-bold shrink-0 whitespace-pre">{currentTrack.originalLabel || "[ORIGINAL]"}</span>
+                        <span className={`${T.rightPanelVal}`}>{currentTrack.artist}</span>
                       </span>
-                      <span className={`${T.rightPanelSub} text-sm tracking-wide flex transition-colors duration-500`}>
-                        <span className="inline-block w-[95px] font-bold shrink-0 whitespace-pre">[AI  COVER]</span>
-                        <span className={`${T.rightPanelVal}`}>Kim Kitsuragi</span>
-                      </span>
+                      {currentTrack.coverLabel && currentTrack.coverArtist && (
+                        <span className={`${T.rightPanelSub} text-sm tracking-wide flex transition-colors duration-500`}>
+                          <span className="inline-block w-[95px] font-bold shrink-0 whitespace-pre">{currentTrack.coverLabel}</span>
+                          <span className={`${T.rightPanelVal}`}>{currentTrack.coverArtist}</span>
+                        </span>
+                      )}
                     </div>
                  </div>
                </div>
@@ -635,7 +841,7 @@ export default function App() {
                <div className={`h-px bg-gradient-to-r ${isLight ? 'from-transparent via-[#8c8678] to-transparent' : 'from-transparent via-white/20 to-transparent'} w-full mb-6`} />
 
                {/* Lyrics Dialogue Stream */}
-               <div className="flex-1 overflow-y-auto scrollbar-de pr-4 pb-2 relative space-y-4">
+               <div ref={lyricsContainerRef} className="flex-1 overflow-y-auto scrollbar-de pr-4 pb-2 relative space-y-4">
                   
                   {activeLyrics.length === 0 && (
                     <div className={`${T.lyricSub} italic mt-10`}>信号微弱，未接收到文本数据...</div>
@@ -667,7 +873,6 @@ export default function App() {
                       </div>
                     );
                   })}
-                  <div ref={dialogueEndRef} />
                   
                   {/* Optional: Decorator line moving down */}
                   {activeLyricIndex !== -1 && (
@@ -785,7 +990,7 @@ export default function App() {
              {/* Controls */}
              <div className="flex justify-center w-full mt-4 px-4 gap-6">
                <button 
-                 className={`w-12 h-12 rounded-full bg-de-orange text-white flex items-center justify-center hover:bg-[#b0351b] transition-colors shadow-lg`}
+                 className={`w-12 h-12 rounded-full bg-de-orange text-white flex items-center justify-center hover:bg-[#b0351b] transition-all shadow-lg active:scale-95`}
                  onClick={() => {
                    const a = document.createElement('a');
                    a.href = playlist[currentTrackIdx]?.audioUrl;
@@ -797,7 +1002,7 @@ export default function App() {
                  <Download size={20} />
                </button>
                <button 
-                 className={`w-12 h-12 rounded-full bg-[#2a2c31] text-white flex items-center justify-center hover:bg-black transition-colors shadow-lg`}
+                 className={`w-12 h-12 rounded-full bg-[#2a2c31] text-white flex items-center justify-center hover:bg-black transition-all shadow-lg active:scale-95`}
                  onClick={() => setIsTapeModalOpen(false)}
                  title="Close"
                >
