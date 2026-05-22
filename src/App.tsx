@@ -489,9 +489,18 @@ export default function App() {
 
   if (hasDeclined) {
     return (
-      <div className={`min-h-[100dvh] md:h-screen ${T.bg} font-serif flex items-center justify-center p-4 selection:bg-de-orange selection:text-white select-none transition-colors duration-500 overflow-hidden`}>
-         <div className="text-center opacity-50">
-            已关闭
+      <div 
+        className={`min-h-[100dvh] md:h-screen ${T.bg} font-serif flex items-center justify-center p-4 selection:bg-de-orange selection:text-white select-none transition-colors duration-500 overflow-hidden relative`}
+        style={{
+          backgroundImage: 'url(/png/Disco_Ball.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+         <div className={`absolute inset-0 z-0 ${isLight ? 'bg-[#ebede6]/80' : 'bg-de-bg/60'} transition-colors duration-500`}></div>
+         <div className="text-center opacity-30 relative z-10">
+            感谢您的访问
          </div>
       </div>
     );
@@ -499,8 +508,17 @@ export default function App() {
 
   if (!hasAcceptedTerms) {
     return (
-      <div className={`min-h-[100dvh] md:h-screen ${T.bg} font-serif flex items-center justify-center p-4 selection:bg-de-orange selection:text-white select-none transition-colors duration-500 overflow-hidden`}>
-        <div className={`max-w-2xl w-full p-8 md:p-12 border-2 ${isLight ? 'bg-[#e8e4db] border-[#b5af9f]' : 'bg-[#121417] border-[#3a3d45]'} tracking-wider leading-relaxed shadow-2xl rounded-sm`}>
+      <div 
+        className={`min-h-[100dvh] md:h-screen ${T.bg} font-serif flex items-center justify-center p-4 selection:bg-de-orange selection:text-white select-none transition-colors duration-500 overflow-hidden relative`}
+        style={{
+          backgroundImage: 'url(/png/Disco_Ball.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        <div className={`absolute inset-0 z-0 ${isLight ? 'bg-[#ebede6]/80' : 'bg-de-bg/60'} transition-colors duration-500`}></div>
+        <div className={`max-w-2xl w-full p-8 md:p-12 border-2 ${isLight ? 'bg-[#e8e4db] border-[#b5af9f]' : 'bg-[#121417] border-[#3a3d45]'} tracking-wider leading-relaxed shadow-2xl rounded-sm relative z-10`}>
           <h1 className="text-xl md:text-3xl font-bold mb-8 text-center text-[#b0351b]">
             【内容预警与入站须知】
           </h1>
@@ -541,7 +559,16 @@ export default function App() {
 
   return (
     <>
-      <div className={`min-h-[100dvh] md:h-screen ${T.bg} font-serif flex md:items-center justify-center p-0 selection:bg-de-orange selection:text-white select-none transition-colors duration-500 overflow-hidden`}>
+      <div 
+        className={`min-h-[100dvh] md:h-screen ${T.bg} font-serif flex md:items-center justify-center p-0 selection:bg-de-orange selection:text-white select-none transition-colors duration-500 overflow-hidden relative`}
+        style={{
+          backgroundImage: isLight ? 'url(/png/Horrific_Necktie.png)' : 'url(/png/Arriving_On_The_Scene.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        <div className={`absolute inset-0 z-0 ${isLight ? 'bg-[#ebede6]/80' : 'bg-de-bg/60'} transition-colors duration-500`}></div>
         
         {/* Hidden Audio Element */}
         <audio 
@@ -552,7 +579,7 @@ export default function App() {
           onEnded={handleTrackEnded}
         />
 
-        <div className={`w-full h-full min-h-[100dvh] md:min-h-0 flex flex-col md:flex-row overflow-hidden relative`}>
+        <div className={`w-full h-full min-h-[100dvh] md:min-h-0 flex flex-col md:flex-row overflow-hidden relative z-10`}>
           
           {/* LEFT PANEL : The FM Radio Player (4/7 of screen on desktop) */}
           <div className={`md:ml-[3.57%] md:w-[57.14%] flex-shrink-0 flex-none min-h-[600px] md:min-h-0 flex flex-col p-4 sm:p-8 md:pl-6 lg:pl-10 xl:pl-12 border-b md:border-b-0 md:border-r border-t-0 border-l-0 ${T.leftGradient} overflow-y-auto scrollbar-de`}>
