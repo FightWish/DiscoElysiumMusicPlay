@@ -128,7 +128,7 @@ function Knob({ label, value, onChange, isVolume = false, inactive = false, isLi
 
 export default function App() {
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(() => localStorage.getItem('kimai_warning_accepted') === 'true');
-  const [hasDeclined, setHasDeclined] = useState(false);
+  const [hasDeclined, setHasDeclined] = useState(() => localStorage.getItem('kimai_warning_declined') === 'true');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [currentTrackIdx, setCurrentTrackIdx] = useState(0);
 
@@ -546,7 +546,10 @@ export default function App() {
               {countdown > 0 ? `[阅读须知并等待 ${countdown} 秒]` : '[我已了解并接受，进入网站]'}
             </button>
             <button 
-              onClick={() => setHasDeclined(true)}
+              onClick={() => {
+                setHasDeclined(true);
+                localStorage.setItem('kimai_warning_declined', 'true');
+              }}
               className={`flex-1 flex items-center justify-center sm:flex-none uppercase tracking-widest px-6 py-4 border-2 ${isLight ? 'border-[#b5af9f] text-[#2a2b25] hover:bg-[#b5af9f]/10' : 'border-[#3a3d45] text-de-text hover:bg-[#3a3d45]/30'} transition-all active:scale-[0.98] font-bold`}
             >
               [我不能接受，关闭网站]
