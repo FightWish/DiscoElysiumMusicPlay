@@ -492,7 +492,7 @@ export default function App() {
       <div 
         className={`min-h-[100dvh] md:h-screen ${T.bg} font-serif flex items-center justify-center p-4 selection:bg-de-orange selection:text-white select-none transition-colors duration-500 overflow-hidden relative`}
         style={{
-          backgroundImage: 'url(/png/Disco_Ball.png)',
+          backgroundImage: 'url(https://kimkitsuragi.oss-cn-hangzhou.aliyuncs.com/Disco_Ball.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'
@@ -511,7 +511,7 @@ export default function App() {
       <div 
         className={`min-h-[100dvh] md:h-screen ${T.bg} font-serif flex items-center justify-center p-4 selection:bg-de-orange selection:text-white select-none transition-colors duration-500 overflow-hidden relative`}
         style={{
-          backgroundImage: 'url(/png/Disco_Ball.png)',
+          backgroundImage: 'url(https://kimkitsuragi.oss-cn-hangzhou.aliyuncs.com/Disco_Ball.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'
@@ -565,7 +565,7 @@ export default function App() {
       <div 
         className={`min-h-[100dvh] md:h-screen ${T.bg} font-serif flex md:items-center justify-center p-0 selection:bg-de-orange selection:text-white select-none transition-colors duration-500 overflow-hidden relative`}
         style={{
-          backgroundImage: isLight ? 'url(/png/Horrific_Necktie.png)' : 'url(/png/Arriving_On_The_Scene.png)',
+          backgroundImage: isLight ? 'url(https://kimkitsuragi.oss-cn-hangzhou.aliyuncs.com/Horrific_Necktie.png)' : 'url(https://kimkitsuragi.oss-cn-hangzhou.aliyuncs.com/Arriving_On_The_Scene.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'
