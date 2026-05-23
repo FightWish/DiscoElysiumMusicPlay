@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Star, Download, X } from 'lucide-react';
 import defaultPlaylist from '../playlist.json';
 // import defaultPlaylist from '../playlist.json';
@@ -126,7 +127,16 @@ function Knob({ label, value, onChange, isVolume = false, inactive = false, isLi
 }
 
 
-export default function App() {
+export default function AppWithAnalytics() {
+  return (
+    <>
+      <Analytics />
+      <App />
+    </>
+  );
+}
+
+function App() {
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(() => localStorage.getItem('kimai_warning_accepted') === 'true');
   const [hasDeclined, setHasDeclined] = useState(() => localStorage.getItem('kimai_warning_declined') === 'true');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
