@@ -3,10 +3,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Analytics } from '@vercel/analytics/react';
-import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Star, Download, X } from 'lucide-react';
-import defaultPlaylist from '../playlist.json';
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import { Analytics } from "@vercel/analytics/react";
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Shuffle,
+  Repeat,
+  Repeat1,
+  Star,
+  Download,
+  X,
+} from "lucide-react";
+import defaultPlaylist from "../playlist.json";
 // import defaultPlaylist from '../playlist.json';
 
 // --- Types & Data ---
@@ -14,6 +25,7 @@ import defaultPlaylist from '../playlist.json';
 interface LyricLine {
   time: number;
   text: string;
+  transText?: string;
   speaker?: string;
   dialogue?: string;
 }
@@ -31,10 +43,11 @@ interface Track {
   cover: string;
   audioUrl: string;
   lrc: string;
+  lrcTrans?: string;
 }
 
 const PLAYLIST_URL = 'https://kimkitsuragi.oss-cn-hangzhou.aliyuncs.com/svc_done/playlist.json';
-// import localPlaylistUrl from '../playlist.json?url';
+// import localPlaylistUrl from "../playlist.json?url";
 // const PLAYLIST_URL = localPlaylistUrl;
 
 // We'll keep a fallback so the app doesn't crash before loading
@@ -43,24 +56,24 @@ let FALLBACK_PLAYLIST: Track[] = defaultPlaylist as Track[];
 // --- Utility Functions ---
 
 const parseLRC = (lrcString: string): LyricLine[] => {
-  const lines = lrcString.split('\n');
+  const lines = lrcString.split("\n");
   const result: LyricLine[] = [];
   const timeReg = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/;
 
   lines.forEach((line) => {
     const match = timeReg.exec(line);
     if (!match) return;
-    
+
     const minutes = parseInt(match[1]);
     const seconds = parseInt(match[2]);
     const milliseconds = parseInt(match[3]) * (match[3].length === 2 ? 10 : 1);
     const time = minutes * 60 + seconds + milliseconds / 1000;
-    
-    const rawText = line.replace(timeReg, '').trim();
+
+    const rawText = line.replace(timeReg, "").trim();
     if (!rawText) return;
 
     // Try to split logic for DE style Dialogue if it has ' - '
-    const separatorIdx = rawText.indexOf(' - ');
+    const separatorIdx = rawText.indexOf(" - ");
     if (separatorIdx !== -1) {
       result.push({
         time,
@@ -78,54 +91,71 @@ const parseLRC = (lrcString: string): LyricLine[] => {
 
 // --- Components ---
 
-function Knob({ label, value, onChange, isVolume = false, inactive = false, isLight = false }: { label: string, value: number, onChange?: (val: number) => void, isVolume?: boolean, inactive?: boolean, isLight?: boolean }) {
-  const safeValue = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
-  const rotation = inactive ? 45 : (safeValue * 270 - 135);
-  
+function Knob({
+  label,
+  value,
+  onChange,
+  isVolume = false,
+  inactive = false,
+  isLight = false,
+}: {
+  label: string;
+  value: number;
+  onChange?: (val: number) => void;
+  isVolume?: boolean;
+  inactive?: boolean;
+  isLight?: boolean;
+}) {
+  const safeValue = Number.isFinite(value)
+    ? Math.max(0, Math.min(1, value))
+    : 0;
+  const rotation = inactive ? 45 : safeValue * 270 - 135;
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (inactive || !onChange) return;
-    
+
     e.preventDefault();
-    
+
     const startY = e.clientY;
     const startX = e.clientX;
     const startValue = safeValue;
-    
+
     const onMove = (moveEv: PointerEvent) => {
       moveEv.preventDefault();
       const deltaY = startY - moveEv.clientY;
       const deltaX = moveEv.clientX - startX;
-      const delta = (deltaY + deltaX) * 0.005; 
+      const delta = (deltaY + deltaX) * 0.005;
       onChange(Math.max(0, Math.min(1, startValue + delta)));
     };
-    
+
     const onUp = () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      window.removeEventListener('pointercancel', onUp);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
     };
-    
-    window.addEventListener('pointermove', onMove, { passive: false });
-    window.addEventListener('pointerup', onUp, { once: true });
-    window.addEventListener('pointercancel', onUp, { once: true });
+
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp, { once: true });
+    window.addEventListener("pointercancel", onUp, { once: true });
   };
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <div 
-        className={`w-16 h-16 rounded-full border-4 ${isLight ? 'border-[#b5af9f] bg-[#e8e4db]' : 'border-[#3a3d45] bg-[#121417]'} relative flex items-center justify-center shadow-inner touch-none transition-transform ${inactive ? 'opacity-70' : 'cursor-pointer active:scale-[0.98]'}`}
+      <div
+        className={`w-16 h-16 rounded-full border-4 ${isLight ? "border-[#b5af9f] bg-[#e8e4db]" : "border-[#3a3d45] bg-[#121417]"} relative flex items-center justify-center shadow-inner touch-none transition-transform ${inactive ? "opacity-70" : "cursor-pointer active:scale-[0.98]"}`}
         onPointerDown={handlePointerDown}
       >
-        <div 
-          className={`w-1 h-6 ${isVolume ? 'bg-[#b0351b]' : (isLight ? 'bg-[#618029]' : 'bg-[#666]')} absolute top-2 rounded-full transform origin-bottom ${inactive ? '' : 'transition-transform duration-75 ease-out'}`}
+        <div
+          className={`w-1 h-6 ${isVolume ? "bg-[#b0351b]" : isLight ? "bg-[#618029]" : "bg-[#666]"} absolute top-2 rounded-full transform origin-bottom ${inactive ? "" : "transition-transform duration-75 ease-out"}`}
           style={{ transform: `rotate(${rotation}deg)` }}
         />
       </div>
-      <span className="text-[10px] uppercase tracking-widest text-[#666] font-sans -mt-0.5">{label}</span>
+      <span className="text-[10px] uppercase tracking-widest text-[#666] font-sans -mt-0.5">
+        {label}
+      </span>
     </div>
   );
 }
-
 
 export default function AppWithAnalytics() {
   return (
@@ -137,71 +167,109 @@ export default function AppWithAnalytics() {
 }
 
 function App() {
-  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(() => localStorage.getItem('kimai_warning_accepted') === 'true');
-  const [hasDeclined, setHasDeclined] = useState(() => localStorage.getItem('kimai_warning_declined') === 'true');
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(
+    () => localStorage.getItem("kimai_warning_accepted") === "true",
+  );
+  const [hasDeclined, setHasDeclined] = useState(
+    () => localStorage.getItem("kimai_warning_declined") === "true",
+  );
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [currentTrackIdx, setCurrentTrackIdx] = useState(0);
+  const [lrcMode, setLrcMode] = useState<"original" | "bilingual">("bilingual");
 
-  const isLight = theme === 'light';
+  const isLight = theme === "light";
 
   const T = {
-    bg: isLight ? 'bg-[#ebede6] text-[#2a2b25]' : 'bg-de-bg text-de-text',
-    leftGradient: isLight ? 'from-[#e1ddcb] to-[#d4cfbd] border-[#b5af9f]' : 'from-[#121417] to-[#0c0d10] border-[#2a2c31]',
-    chassis: isLight ? 'bg-[#d8d3c1] border-[#9c9484]' : 'bg-de-panel border-[#3a3d45]',
-    dialBg: isLight ? 'bg-[#ebede6] border-[#b5af9f]' : 'bg-[#08090a] border-[#2a2c31]',
-    freqText: isLight ? 'text-[#2a2b25]' : 'text-[#e3e0d7]',
-    fmMark: isLight ? 'bg-[#618029]/30' : 'bg-white/40',
-    playlistHeader: isLight ? 'text-[#ebede6] bg-[#618029]' : 'text-[#111] bg-[#e3e0d7]',
-    playlistItemActive: isLight ? 'text-[#2a2b25] bg-[#899c75]/20 font-bold' : 'text-white bg-white/10',
-    playlistItemInactive: isLight ? 'text-[#61734f] hover:text-[#2a2b25] hover:bg-[#899c75]/10' : 'text-[#888] hover:text-white hover:bg-white/5',
-    playlistNumActive: isLight ? 'text-[#b0351b]' : 'text-[#b0351b]',
-    playlistNumInactive: isLight ? 'text-[#61734f]/80' : 'text-[#888]',
-    btnRandActive: isLight ? 'bg-[#b0351b] border-[#5a1b0d] shadow-inner text-white' : 'bg-[#b0351b] border-[#3a1a1a] shadow-inner text-white',
-    btnRandInactive: isLight ? 'bg-[#ebede6] border-[#b5af9f] border-b-[#8c8678] border-r-[#8c8678] text-[#697d55] hover:text-[#2a2b25]' : 'bg-[#1a1c22] border-[#3a3d45] border-b-[#111] border-r-[#111] text-[#666] hover:text-[#e3e0d7]',
-    playBtnWrap: isLight ? 'bg-[#d4cfbd] border-[#9c9484]' : 'bg-[#2a2c31] border-[#1a1a1a]',
-    playSecondary: isLight ? 'bg-[#ebede6] border-[#b5af9f] border-b-[#8c8678] border-r-[#8c8678] text-[#697d55] hover:text-[#2a2b25] hover:border-[#b0351b]' : 'bg-[#1a1c22] border-[#3a3d45] border-b-[#111] border-r-[#111] text-[#666] hover:text-[#e3e0d7] hover:border-[#b0351b]',
-    playActive: isLight ? 'bg-[#b0351b] text-white shadow-[#b0351b]/30 border-[#b0351b] border-b-[#5a1b0d] border-r-[#5a1b0d]' : 'bg-[#b0351b]/20 text-white shadow-[#b0351b]/30 border-t-[#b0351b] border-l-[#b0351b] border-[#3a3d45] border-b-[#111] border-r-[#111]',
-    playInactive: isLight ? 'bg-[#ebede6] text-[#697d55] hover:text-[#2a2b25] border-[#b5af9f] border-b-[#8c8678] border-r-[#8c8678] hover:border-t-[#b0351b] hover:border-l-[#b0351b]' : 'bg-[#1a1c22] text-[#666] hover:text-[#e3e0d7] border-[#3a3d45] border-b-[#111] border-r-[#111] hover:border-t-[#b0351b] hover:border-l-[#b0351b]',
-    rightBg: isLight ? 'bg-[#e1ddcb]' : 'bg-[#111317]',
-    lyricNorSpeaker: isLight ? 'text-[#618029]' : 'text-[#666]',
-    lyricYouSpeaker: isLight ? 'text-[#d96b00]' : 'text-[#ff8a00]',
-    lyricOthSpeaker: isLight ? 'text-[#364968]' : 'text-[#5d80d2]',
-    lyricActiveText: isLight ? 'text-[#b0351b]' : 'text-[#e3e0d7]',
-    lyricSub: isLight ? 'text-[#899c75]' : 'text-[#999]',
-    rightPanelSub: isLight ? 'text-[#8c8678]' : 'text-[#888]',
-    rightPanelVal: isLight ? 'text-[#2a2b25]' : 'text-[#c0c0c0]',
+    bg: isLight ? "bg-[#ebede6] text-[#2a2b25]" : "bg-de-bg text-de-text",
+    leftGradient: isLight
+      ? "from-[#e1ddcb] to-[#d4cfbd] border-[#b5af9f]"
+      : "from-[#121417] to-[#0c0d10] border-[#2a2c31]",
+    chassis: isLight
+      ? "bg-[#d8d3c1] border-[#9c9484]"
+      : "bg-de-panel border-[#3a3d45]",
+    dialBg: isLight
+      ? "bg-[#ebede6] border-[#b5af9f]"
+      : "bg-[#08090a] border-[#2a2c31]",
+    freqText: isLight ? "text-[#2a2b25]" : "text-[#e3e0d7]",
+    fmMark: isLight ? "bg-[#618029]/30" : "bg-white/40",
+    playlistHeader: isLight
+      ? "text-[#ebede6] bg-[#618029]"
+      : "text-[#111] bg-[#e3e0d7]",
+    playlistItemActive: isLight
+      ? "text-[#2a2b25] bg-[#899c75]/20 font-bold"
+      : "text-white bg-white/10",
+    playlistItemInactive: isLight
+      ? "text-[#61734f] hover:text-[#2a2b25] hover:bg-[#899c75]/10"
+      : "text-[#888] hover:text-white hover:bg-white/5",
+    playlistNumActive: isLight ? "text-[#b0351b]" : "text-[#b0351b]",
+    playlistNumInactive: isLight ? "text-[#61734f]/80" : "text-[#888]",
+    btnRandActive: isLight
+      ? "bg-[#b0351b] border-[#5a1b0d] shadow-inner text-white"
+      : "bg-[#b0351b] border-[#3a1a1a] shadow-inner text-white",
+    btnRandInactive: isLight
+      ? "bg-[#ebede6] border-[#b5af9f] border-b-[#8c8678] border-r-[#8c8678] text-[#697d55] hover:text-[#2a2b25]"
+      : "bg-[#1a1c22] border-[#3a3d45] border-b-[#111] border-r-[#111] text-[#666] hover:text-[#e3e0d7]",
+    playBtnWrap: isLight
+      ? "bg-[#d4cfbd] border-[#9c9484]"
+      : "bg-[#2a2c31] border-[#1a1a1a]",
+    playSecondary: isLight
+      ? "bg-[#ebede6] border-[#b5af9f] border-b-[#8c8678] border-r-[#8c8678] text-[#697d55] hover:text-[#2a2b25] hover:border-[#b0351b]"
+      : "bg-[#1a1c22] border-[#3a3d45] border-b-[#111] border-r-[#111] text-[#666] hover:text-[#e3e0d7] hover:border-[#b0351b]",
+    playActive: isLight
+      ? "bg-[#b0351b] text-white shadow-[#b0351b]/30 border-[#b0351b] border-b-[#5a1b0d] border-r-[#5a1b0d]"
+      : "bg-[#b0351b]/20 text-white shadow-[#b0351b]/30 border-t-[#b0351b] border-l-[#b0351b] border-[#3a3d45] border-b-[#111] border-r-[#111]",
+    playInactive: isLight
+      ? "bg-[#ebede6] text-[#697d55] hover:text-[#2a2b25] border-[#b5af9f] border-b-[#8c8678] border-r-[#8c8678] hover:border-t-[#b0351b] hover:border-l-[#b0351b]"
+      : "bg-[#1a1c22] text-[#666] hover:text-[#e3e0d7] border-[#3a3d45] border-b-[#111] border-r-[#111] hover:border-t-[#b0351b] hover:border-l-[#b0351b]",
+    rightBg: isLight ? "bg-[#e1ddcb]" : "bg-[#111317]",
+    lyricNorSpeaker: isLight ? "text-[#618029]" : "text-[#666]",
+    lyricYouSpeaker: isLight ? "text-[#d96b00]" : "text-[#ff8a00]",
+    lyricOthSpeaker: isLight ? "text-[#364968]" : "text-[#5d80d2]",
+    lyricActiveText: isLight ? "text-[#b0351b]" : "text-[#e3e0d7]",
+    lyricSub: isLight ? "text-[#899c75]" : "text-[#999]",
+    rightPanelSub: isLight ? "text-[#8c8678]" : "text-[#888]",
+    rightPanelVal: isLight ? "text-[#2a2b25]" : "text-[#c0c0c0]",
   };
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(1);
   const [volume, setVolume] = useState(1);
-  const [playMode, setPlayMode] = useState<'seq' | 'rand' | 'loop'>('seq');
+  const [playMode, setPlayMode] = useState<"seq" | "rand" | "loop">("seq");
   const [now, setNow] = useState(new Date());
-  const [expandedAlbums, setExpandedAlbums] = useState<Record<string, boolean>>({'狂飙怪人.FM': true, '悲伤FM': false});
-  const [starredAlbums, setStarredAlbums] = useState<Record<string, boolean>>({'狂飙怪人.FM': true});
+  const [expandedAlbums, setExpandedAlbums] = useState<Record<string, boolean>>(
+    { "狂飙怪人.FM": true, 悲伤FM: false },
+  );
+  const [starredAlbums, setStarredAlbums] = useState<Record<string, boolean>>({
+    "狂飙怪人.FM": true,
+  });
   const [isTapeModalOpen, setIsTapeModalOpen] = useState(false);
   const [countdown, setCountdown] = useState(5);
-  
+
   const toggleAlbum = (album: string) => {
-    setExpandedAlbums(prev => ({ ...prev, [album]: !prev[album] }));
+    setExpandedAlbums((prev) => ({ ...prev, [album]: !prev[album] }));
   };
 
   const toggleStar = (e: React.MouseEvent, album: string) => {
     e.stopPropagation();
-    if (album === '狂飙怪人.FM') return;
-    setStarredAlbums(prev => ({ ...prev, [album]: !prev[album] }));
+    if (album === "狂飙怪人.FM") return;
+    setStarredAlbums((prev) => ({ ...prev, [album]: !prev[album] }));
   };
 
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const progressRef = useRef<HTMLDivElement>(null);
   const chassisRef = useRef<HTMLDivElement>(null);
-  const [chassisHeight, setChassisHeight] = useState<number | undefined>(undefined);
+  const [chassisHeight, setChassisHeight] = useState<number | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
     if (!chassisRef.current) return;
     const observer = new ResizeObserver((entries) => {
-      setChassisHeight(entries[0].borderBoxSize?.[0]?.blockSize || entries[0].contentRect.height);
+      setChassisHeight(
+        entries[0].borderBoxSize?.[0]?.blockSize ||
+          entries[0].contentRect.height,
+      );
     });
     observer.observe(chassisRef.current);
     return () => observer.disconnect();
@@ -214,43 +282,55 @@ function App() {
 
   useEffect(() => {
     if (!hasAcceptedTerms && countdown > 0) {
-      const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
+      const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
       return () => clearTimeout(timer);
     }
   }, [hasAcceptedTerms, countdown]);
   const [playlist, setPlaylist] = useState<Track[]>(FALLBACK_PLAYLIST);
   const [isLoadingPlaylist, setIsLoadingPlaylist] = useState(true);
-  const [playlistError, setPlaylistError] = useState('');
+  const [playlistError, setPlaylistError] = useState("");
 
   // --- Compute Albums ---
   const groupedPlaylist = useMemo(() => {
-    return playlist.reduce((acc, track, i) => {
-      const album = track.album || '未知电台';
-      if (!acc[album]) {
-        acc[album] = { 
-          tracks: [], 
-          freq: track.albumFreq || '??.?', 
-          color: track.albumColor || 'text-[#b0351b]' 
-        };
-      }
-      acc[album].tracks.push({track, index: i});
-      return acc;
-    }, {} as Record<string, { tracks: {track: Track, index: number}[], freq: string, color: string }>);
+    return playlist.reduce(
+      (acc, track, i) => {
+        const album = track.album || "未知电台";
+        if (!acc[album]) {
+          acc[album] = {
+            tracks: [],
+            freq: track.albumFreq || "??.?",
+            color: track.albumColor || "text-[#b0351b]",
+          };
+        }
+        acc[album].tracks.push({ track, index: i });
+        return acc;
+      },
+      {} as Record<
+        string,
+        {
+          tracks: { track: Track; index: number }[];
+          freq: string;
+          color: string;
+        }
+      >,
+    );
   }, [playlist]);
 
-  const sortedAlbums = useMemo(() => Object.keys(groupedPlaylist), [groupedPlaylist]);
-  const currentAlbum = playlist[currentTrackIdx]?.album || '未知电台';
-  const currentFreq = groupedPlaylist[currentAlbum]?.freq || '0';
+  const sortedAlbums = useMemo(
+    () => Object.keys(groupedPlaylist),
+    [groupedPlaylist],
+  );
+  const currentAlbum = playlist[currentTrackIdx]?.album || "未知电台";
+  const currentFreq = groupedPlaylist[currentAlbum]?.freq || "0";
   const currentFreqNumber = parseFloat(currentFreq) || 76;
   const currentAlbumIndex = sortedAlbums.indexOf(currentAlbum);
-
 
   useEffect(() => {
     let active = true;
     const fetchPlaylist = async () => {
       try {
         const res = await fetch(PLAYLIST_URL);
-        if (!res.ok) throw new Error('Network error');
+        if (!res.ok) throw new Error("Network error");
         const data = await res.json();
         if (active && data && data.length > 0) {
           setPlaylist(data);
@@ -260,36 +340,77 @@ function App() {
         console.error("Failed to load playlist:", err);
         if (active) {
           setPlaylist(FALLBACK_PLAYLIST);
-          setPlaylistError('信号微弱，未接受到数据…');
+          setPlaylistError("信号微弱，未接受到数据…");
           setIsLoadingPlaylist(false);
         }
       }
     };
     fetchPlaylist();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   const lyricsContainerRef = useRef<HTMLDivElement>(null);
-  
+
   const currentTrack = playlist[currentTrackIdx] || FALLBACK_PLAYLIST[0];
   const [activeLyrics, setActiveLyrics] = useState<LyricLine[]>([]);
 
   useEffect(() => {
     let active = true;
     const fetchLrc = async () => {
-      if (!currentTrack || !currentTrack.lrc) {
+      if (!currentTrack || (!currentTrack.lrc && !currentTrack.lrcTrans)) {
         if (active) setActiveLyrics([]);
         return;
       }
+
       try {
-        const lrcSrc = currentTrack.lrc;
-        if (lrcSrc.startsWith('http') || lrcSrc.startsWith('//') || lrcSrc.startsWith('/')) {
-           const res = await fetch(lrcSrc);
-           if (!res.ok) throw new Error('Network response was not ok');
-           const text = await res.text();
-           if (active) setActiveLyrics(parseLRC(text));
-        } else {
-           if (active) setActiveLyrics(parseLRC(lrcSrc));
+        let origLyrics: LyricLine[] = [];
+        let transLyrics: LyricLine[] = [];
+
+        const loadLrc = async (
+          url: string | undefined,
+        ): Promise<LyricLine[]> => {
+          if (!url) return [];
+          if (
+            url.startsWith("http") ||
+            url.startsWith("//") ||
+            url.startsWith("/") ||
+            url.includes(".lrc")
+          ) {
+            const res = await fetch(url);
+            if (!res.ok) return [];
+            const text = await res.text();
+            return parseLRC(text);
+          } else {
+            return parseLRC(url);
+          }
+        };
+
+        if (lrcMode === "original" || lrcMode === "bilingual") {
+          origLyrics = await loadLrc(currentTrack.lrc);
+        }
+        if (lrcMode === "bilingual") {
+          transLyrics = await loadLrc(
+            currentTrack.lrcTrans || currentTrack.lrc,
+          );
+        }
+
+        if (!active) return;
+
+        if (lrcMode === "original") {
+          setActiveLyrics(origLyrics);
+        } else if (lrcMode === "bilingual") {
+          const merged: LyricLine[] = origLyrics.map((orig) => {
+            const match = transLyrics.find(
+              (t) => Math.abs(t.time - orig.time) < 0.5,
+            );
+            return {
+              ...orig,
+              transText: match ? match.text : undefined,
+            };
+          });
+          setActiveLyrics(merged.length > 0 ? merged : transLyrics);
         }
       } catch (err) {
         console.error("Failed to load LRC:", err);
@@ -297,25 +418,38 @@ function App() {
       }
     };
     fetchLrc();
-    return () => { active = false; };
-  }, [currentTrack?.id, currentTrack?.lrc]);
-  
-  const progressRatio = Number.isFinite(duration) && duration > 0
-    ? Math.max(0, Math.min(1, currentTime / duration))
-    : 0;
+    return () => {
+      active = false;
+    };
+  }, [currentTrack?.id, currentTrack?.lrc, currentTrack?.lrcTrans, lrcMode]);
+
+  const progressRatio =
+    Number.isFinite(duration) && duration > 0
+      ? Math.max(0, Math.min(1, currentTime / duration))
+      : 0;
 
   const formatTime = (time: number) => {
     if (isNaN(time) || !isFinite(time)) return "00:00";
-    const m = Math.floor(time / 60).toString().padStart(2, '0');
-    const s = Math.floor(time % 60).toString().padStart(2, '0');
+    const m = Math.floor(time / 60)
+      .toString()
+      .padStart(2, "0");
+    const s = Math.floor(time % 60)
+      .toString()
+      .padStart(2, "0");
     return `${m}:${s}`;
   };
 
   const formatLrcTime = (time: number) => {
     if (isNaN(time) || !isFinite(time)) return "00:00.000";
-    const m = Math.floor(time / 60).toString().padStart(2, '0');
-    const s = Math.floor(time % 60).toString().padStart(2, '0');
-    const ms = Math.floor((time % 1) * 1000).toString().padStart(3, '0');
+    const m = Math.floor(time / 60)
+      .toString()
+      .padStart(2, "0");
+    const s = Math.floor(time % 60)
+      .toString()
+      .padStart(2, "0");
+    const ms = Math.floor((time % 1) * 1000)
+      .toString()
+      .padStart(3, "0");
     return `${m}:${s}.${ms}`;
   };
 
@@ -342,7 +476,8 @@ function App() {
   };
 
   const handleProgressPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!progressRef.current || !Number.isFinite(duration) || duration <= 0) return;
+    if (!progressRef.current || !Number.isFinite(duration) || duration <= 0)
+      return;
 
     e.preventDefault();
 
@@ -359,24 +494,24 @@ function App() {
     };
 
     const onUp = () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      window.removeEventListener('pointercancel', onUp);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
     };
 
     updateFromClientX(e.clientX);
-    window.addEventListener('pointermove', onMove, { passive: false });
-    window.addEventListener('pointerup', onUp, { once: true });
-    window.addEventListener('pointercancel', onUp, { once: true });
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp, { once: true });
+    window.addEventListener("pointercancel", onUp, { once: true });
   };
 
   const handleProgressKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'ArrowLeft') {
+    if (e.key === "ArrowLeft") {
       e.preventDefault();
       seekToRatio(progressRatio - 0.02);
     }
 
-    if (e.key === 'ArrowRight') {
+    if (e.key === "ArrowRight") {
       e.preventDefault();
       seekToRatio(progressRatio + 0.02);
     }
@@ -384,21 +519,21 @@ function App() {
 
   const handleFreqChange = (v: number) => {
     if (sortedAlbums.length <= 1) return;
-    
+
     // Map knob value (0-1) to frequency (76 - 108)
     const dragFreq = 76 + v * (108 - 76);
-    
+
     let nearestIdx = 0;
     let minDiff = Infinity;
-    
+
     sortedAlbums.forEach((album, idx) => {
-       const freqStr = groupedPlaylist[album]?.freq || '76';
-       const freqNumber = parseFloat(freqStr) || 76;
-       const diff = Math.abs(freqNumber - dragFreq);
-       if (diff < minDiff) {
-         minDiff = diff;
-         nearestIdx = idx;
-       }
+      const freqStr = groupedPlaylist[album]?.freq || "76";
+      const freqNumber = parseFloat(freqStr) || 76;
+      const diff = Math.abs(freqNumber - dragFreq);
+      if (diff < minDiff) {
+        minDiff = diff;
+        nearestIdx = idx;
+      }
     });
 
     if (nearestIdx !== currentAlbumIndex) {
@@ -411,36 +546,45 @@ function App() {
   };
 
   const handleTrackEnded = () => {
-    if (playMode === 'loop') {
+    if (playMode === "loop") {
       audioRef.current!.currentTime = 0;
-      audioRef.current!.play().catch(e => console.error("Play failed", e));
+      audioRef.current!.play().catch((e) => console.error("Play failed", e));
       return;
     }
 
-    const currentAlbum = playlist[currentTrackIdx]?.album || '未知电台';
-    const albumTracks = playlist.map((t, idx) => ({t, idx})).filter(x => (x.t.album || '未知电台') === currentAlbum);
-    
-    if (playMode === 'rand') {
+    const currentAlbum = playlist[currentTrackIdx]?.album || "未知电台";
+    const albumTracks = playlist
+      .map((t, idx) => ({ t, idx }))
+      .filter((x) => (x.t.album || "未知电台") === currentAlbum);
+
+    if (playMode === "rand") {
       let nextTrackIndex = currentTrackIdx;
       if (albumTracks.length > 1) {
-          while (nextTrackIndex === currentTrackIdx) {
-              const randIdx = Math.floor(Math.random() * albumTracks.length);
-              nextTrackIndex = albumTracks[randIdx].idx;
-          }
+        while (nextTrackIndex === currentTrackIdx) {
+          const randIdx = Math.floor(Math.random() * albumTracks.length);
+          nextTrackIndex = albumTracks[randIdx].idx;
+        }
       }
       setCurrentTrackIdx(nextTrackIndex);
     } else {
-      const currentInAlbumIdx = albumTracks.findIndex(x => x.idx === currentTrackIdx);
+      const currentInAlbumIdx = albumTracks.findIndex(
+        (x) => x.idx === currentTrackIdx,
+      );
       const nextInAlbumIdx = (currentInAlbumIdx + 1) % albumTracks.length;
       setCurrentTrackIdx(albumTracks[nextInAlbumIdx].idx);
     }
   };
 
   const handlePrevTrack = () => {
-    const currentAlbum = playlist[currentTrackIdx]?.album || '未知电台';
-    const albumTracks = playlist.map((t, idx) => ({t, idx})).filter(x => (x.t.album || '未知电台') === currentAlbum);
-    const currentInAlbumIdx = albumTracks.findIndex(x => x.idx === currentTrackIdx);
-    const prevInAlbumIdx = (currentInAlbumIdx - 1 + albumTracks.length) % albumTracks.length;
+    const currentAlbum = playlist[currentTrackIdx]?.album || "未知电台";
+    const albumTracks = playlist
+      .map((t, idx) => ({ t, idx }))
+      .filter((x) => (x.t.album || "未知电台") === currentAlbum);
+    const currentInAlbumIdx = albumTracks.findIndex(
+      (x) => x.idx === currentTrackIdx,
+    );
+    const prevInAlbumIdx =
+      (currentInAlbumIdx - 1 + albumTracks.length) % albumTracks.length;
     setCurrentTrackIdx(albumTracks[prevInAlbumIdx].idx);
   };
 
@@ -470,7 +614,9 @@ function App() {
   // Handle track change auto-play
   useEffect(() => {
     if (isPlaying && audioRef.current) {
-      audioRef.current.play().catch(e => console.log("Auto-play blocked:", e));
+      audioRef.current
+        .play()
+        .catch((e) => console.log("Auto-play blocked:", e));
     }
   }, [currentTrackIdx]);
 
@@ -478,7 +624,10 @@ function App() {
   let activeLyricIndex = -1;
   for (let i = 0; i < activeLyrics.length; i++) {
     if (currentTime >= activeLyrics[i].time) {
-      if (i === activeLyrics.length - 1 || currentTime < activeLyrics[i + 1].time) {
+      if (
+        i === activeLyrics.length - 1 ||
+        currentTime < activeLyrics[i + 1].time
+      ) {
         activeLyricIndex = i;
         break;
       }
@@ -491,76 +640,102 @@ function App() {
       const activeEl = document.getElementById(`lyric-${activeLyricIndex}`);
       const container = lyricsContainerRef.current;
       if (activeEl && container) {
-        const targetScrollTop = activeEl.offsetTop - (container.clientHeight / 2) + (activeEl.clientHeight / 2);
-        container.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+        const targetScrollTop =
+          activeEl.offsetTop -
+          container.clientHeight / 2 +
+          activeEl.clientHeight / 2;
+        container.scrollTo({ top: targetScrollTop, behavior: "smooth" });
       }
     }
   }, [activeLyricIndex]);
 
   if (hasDeclined) {
     return (
-      <div 
+      <div
         className={`min-h-[100dvh] md:h-screen ${T.bg} font-serif flex items-center justify-center p-4 selection:bg-de-orange selection:text-white select-none transition-colors duration-500 overflow-hidden relative`}
         style={{
-          backgroundImage: 'url(https://kimkitsuragi.oss-cn-hangzhou.aliyuncs.com/Disco_Ball.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
+          backgroundImage:
+            "url(https://kimkitsuragi.oss-cn-hangzhou.aliyuncs.com/Disco_Ball.png)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
         }}
       >
-         <div className={`absolute inset-0 z-0 ${isLight ? 'bg-[#ebede6]/80' : 'bg-de-bg/60'} transition-colors duration-500`}></div>
-         <div className="text-center opacity-30 relative z-10">
-            感谢您的访问
-         </div>
+        <div
+          className={`absolute inset-0 z-0 ${isLight ? "bg-[#ebede6]/80" : "bg-de-bg/60"} transition-colors duration-500`}
+        ></div>
+        <div className="text-center opacity-30 relative z-10">感谢您的访问</div>
       </div>
     );
   }
 
   if (!hasAcceptedTerms) {
     return (
-      <div 
+      <div
         className={`min-h-[100dvh] md:h-screen ${T.bg} font-serif flex items-center justify-center p-4 selection:bg-de-orange selection:text-white select-none transition-colors duration-500 overflow-hidden relative`}
         style={{
-          backgroundImage: 'url(https://kimkitsuragi.oss-cn-hangzhou.aliyuncs.com/Disco_Ball.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
+          backgroundImage:
+            "url(https://kimkitsuragi.oss-cn-hangzhou.aliyuncs.com/Disco_Ball.png)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
         }}
       >
-        <div className={`absolute inset-0 z-0 ${isLight ? 'bg-[#ebede6]/80' : 'bg-de-bg/60'} transition-colors duration-500`}></div>
-        <div className={`max-w-2xl w-full p-8 md:p-12 border-2 ${isLight ? 'bg-[#e8e4db] border-[#b5af9f]' : 'bg-[#121417] border-[#3a3d45]'} tracking-wider leading-relaxed shadow-2xl rounded-sm relative z-10`}>
+        <div
+          className={`absolute inset-0 z-0 ${isLight ? "bg-[#ebede6]/80" : "bg-de-bg/60"} transition-colors duration-500`}
+        ></div>
+        <div
+          className={`max-w-2xl w-full p-8 md:p-12 border-2 ${isLight ? "bg-[#e8e4db] border-[#b5af9f]" : "bg-[#121417] border-[#3a3d45]"} tracking-wider leading-relaxed shadow-2xl rounded-sm relative z-10`}
+        >
           <h1 className="text-xl md:text-3xl font-bold mb-8 text-center text-[#b0351b]">
             【内容预警与入站须知】
           </h1>
-          
+
           <div className="text-sm md:text-base space-y-4 mb-10 opacity-90">
             <div className="mt-8 text-center font-bold space-y-1">
-              <p>本网站包含由 <span className="inline-block text-[#b0351b] text-xl font-bold tracking-wider mx-1">AI 音声模型训练</span> 与 <span className="inline-block text-[#b0351b] text-xl font-bold tracking-wider mx-1">AI 声音替换技术</span></p>
+              <p>
+                本网站包含由{" "}
+                <span className="inline-block text-[#b0351b] text-xl font-bold tracking-wider mx-1">
+                  AI 音声模型训练
+                </span>{" "}
+                与{" "}
+                <span className="inline-block text-[#b0351b] text-xl font-bold tracking-wider mx-1">
+                  AI 声音替换技术
+                </span>
+              </p>
               <p>制作的「金·曷城」相关音频。</p>
             </div>
-            <p className="flex items-center font-bold text-[#b0351b] text-xl mt-6"><span className="mr-2 text-2xl drop-shadow-sm">⚠️</span>请注意：</p>
-            <p className="pl-6 border-l-2 border-[#b0351b]/30">所有音频均为技术合成的二次创作，并非声优本人真实演唱或录音。内容仅供圈内交流、学习与娱乐，请勿当真，严禁用于任何商业或非法用途。</p>
-            <p className="mt-8 text-center font-bold text-[#b0351b] text-lg sm:text-lg p-3 bg-[#b0351b]/10 rounded border-y-2 border-[#b0351b]/30">请确认您已完全了解并能够接受此类 AI 生成内容。</p>
+            <p className="flex items-center font-bold text-[#b0351b] text-xl mt-6">
+              <span className="mr-2 text-2xl drop-shadow-sm">⚠️</span>请注意：
+            </p>
+            <p className="pl-6 border-l-2 border-[#b0351b]/30">
+              所有音频均为技术合成的二次创作，并非声优本人真实演唱或录音。内容仅供圈内交流、学习与娱乐，请勿当真，严禁用于任何商业或非法用途。
+            </p>
+            <p className="mt-8 text-center font-bold text-[#b0351b] text-lg sm:text-lg p-3 bg-[#b0351b]/10 rounded border-y-2 border-[#b0351b]/30">
+              请确认您已完全了解并能够接受此类 AI 生成内容。
+            </p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
+            <button
               onClick={() => {
                 if (countdown > 0) return;
                 setHasAcceptedTerms(true);
-                localStorage.setItem('kimai_warning_accepted', 'true');
+                localStorage.setItem("kimai_warning_accepted", "true");
               }}
               disabled={countdown > 0}
-              className={`flex-1 flex items-center justify-center sm:flex-none uppercase tracking-widest px-6 py-4 border-2 ${isLight ? 'border-[#b5af9f] text-[#2a2b25]' : 'border-[#3a3d45] text-de-text'} transition-all font-bold ${countdown > 0 ? 'opacity-50 cursor-not-allowed' : (isLight ? 'hover:bg-[#b5af9f]/10 active:scale-[0.98]' : 'hover:bg-[#3a3d45]/30 active:scale-[0.98]')}`}
+              className={`flex-1 flex items-center justify-center sm:flex-none uppercase tracking-widest px-6 py-4 border-2 ${isLight ? "border-[#b5af9f] text-[#2a2b25]" : "border-[#3a3d45] text-de-text"} transition-all font-bold ${countdown > 0 ? "opacity-50 cursor-not-allowed" : isLight ? "hover:bg-[#b5af9f]/10 active:scale-[0.98]" : "hover:bg-[#3a3d45]/30 active:scale-[0.98]"}`}
             >
-              {countdown > 0 ? `[阅读须知并等待 ${countdown} 秒]` : '[我已了解并接受，进入网站]'}
+              {countdown > 0
+                ? `[阅读须知并等待 ${countdown} 秒]`
+                : "[我已了解并接受，进入网站]"}
             </button>
-            <button 
+            <button
               onClick={() => {
                 setHasDeclined(true);
-                localStorage.setItem('kimai_warning_declined', 'true');
+                localStorage.setItem("kimai_warning_declined", "true");
               }}
-              className={`flex-1 flex items-center justify-center sm:flex-none uppercase tracking-widest px-6 py-4 border-2 ${isLight ? 'border-[#b5af9f] text-[#2a2b25] hover:bg-[#b5af9f]/10' : 'border-[#3a3d45] text-de-text hover:bg-[#3a3d45]/30'} transition-all active:scale-[0.98] font-bold`}
+              className={`flex-1 flex items-center justify-center sm:flex-none uppercase tracking-widest px-6 py-4 border-2 ${isLight ? "border-[#b5af9f] text-[#2a2b25] hover:bg-[#b5af9f]/10" : "border-[#3a3d45] text-de-text hover:bg-[#3a3d45]/30"} transition-all active:scale-[0.98] font-bold`}
             >
               [我不能接受，关闭网站]
             </button>
@@ -572,19 +747,23 @@ function App() {
 
   return (
     <>
-      <div 
+      <div
         className={`min-h-[100dvh] md:h-screen ${T.bg} font-serif flex md:items-center justify-center p-0 selection:bg-de-orange selection:text-white select-none transition-colors duration-500 overflow-hidden relative`}
         style={{
-          backgroundImage: isLight ? 'url(https://kimkitsuragi.oss-cn-hangzhou.aliyuncs.com/Horrific_Necktie.png)' : 'url(https://kimkitsuragi.oss-cn-hangzhou.aliyuncs.com/Arriving_On_The_Scene.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
+          backgroundImage: isLight
+            ? "url(https://kimkitsuragi.oss-cn-hangzhou.aliyuncs.com/Horrific_Necktie.png)"
+            : "url(https://kimkitsuragi.oss-cn-hangzhou.aliyuncs.com/Arriving_On_The_Scene.png)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
         }}
       >
-        <div className={`absolute inset-0 z-0 ${isLight ? 'bg-[#ebede6]/80' : 'bg-de-bg/60'} transition-colors duration-500`}></div>
-        
+        <div
+          className={`absolute inset-0 z-0 ${isLight ? "bg-[#ebede6]/80" : "bg-de-bg/60"} transition-colors duration-500`}
+        ></div>
+
         {/* Hidden Audio Element */}
-        <audio 
+        <audio
           ref={audioRef}
           src={currentTrack.audioUrl}
           onTimeUpdate={handleTimeUpdate}
@@ -592,464 +771,740 @@ function App() {
           onEnded={handleTrackEnded}
         />
 
-        <div className={`w-full h-full min-h-[100dvh] md:min-h-0 flex flex-col md:flex-row overflow-hidden relative z-10`}>
-          
+        <div
+          className={`w-full h-full min-h-[100dvh] md:min-h-0 flex flex-col md:flex-row overflow-hidden relative z-10`}
+        >
           {/* LEFT PANEL : The FM Radio Player (4/7 of screen on desktop) */}
-          <div className={`md:ml-[3.57%] md:w-[57.14%] flex-shrink-0 flex-none min-h-[600px] md:min-h-0 flex flex-col p-4 sm:p-8 md:pl-6 lg:pl-10 xl:pl-12 border-b md:border-b-0 md:border-r border-t-0 border-l-0 ${T.leftGradient} overflow-y-auto scrollbar-de`}>
-          
-          {/* Header Title */}
-          <div className="mb-8">
-            <h1 className="text-xs uppercase tracking-widest text-[#666] mb-2 font-sans font-bold">
-              收 音 机
-            </h1>
-            <div className="h-[2px] w-12 bg-de-orange mb-2"></div>
-            <div className="text-[10px] font-sans uppercase tracking-widest text-[#666]">
-              你把手搭在了老式收音机的旋钮上。
-            </div>
-          </div>
-
-          {/* Radio Chassis */}
-          <div className="flex-1 flex flex-col items-center justify-center min-h-[400px]">
-            <div ref={chassisRef} className={`w-full ${T.chassis} rounded-sm p-4 sm:p-6 lg:p-8 shadow-2xl flex flex-col relative overflow-hidden transition-colors duration-500`}>
-            {/* Grime overlay removed */}
-            
-            {/* Dial & Frequencies */}
-            <div className={`${T.dialBg} border-2 p-6 mb-6 relative overflow-hidden shadow-inner flex flex-col gap-4 transition-colors duration-500`}>
-              <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none bg-[radial-gradient(circle_at_center,_#fff_0%,_transparent_100%)]"></div>
-              
-              {/* Top row: Frequency & Signal */}
-              <div className={`flex justify-between items-end border-b pb-4 relative z-10 ${isLight ? 'border-[#b5af9f]' : 'border-[#2a2c31]'}`}>
-                <div className="flex flex-col shrink-0">
-                  <span className="text-[10px] uppercase text-[#b0351b] font-sans font-bold tracking-tighter whitespace-nowrap">Frequency</span>
-                  <span className={`text-5xl font-mono tracking-tighter transition-colors ${T.freqText} whitespace-nowrap`}>{currentFreq}<span className="text-xl">FM</span></span>
-                </div>
-                
-                {/* Visual Dial (FM marks) */}
-                <div className="flex-1 mx-6 mb-[1.1rem]">
-                  <div className={`flex items-center ${isLight ? 'text-[#899c75]' : 'text-de-muted'} font-oswald text-xs opacity-70 w-full relative`}>
-                    <span className="shrink-0">76</span>
-                    <span className={`flex-1 mx-3 min-w-[40px] h-[1px] ${isLight ? 'bg-[#899c75]' : 'bg-de-muted'} relative flex justify-between items-center`}>
-                       {[...Array(31)].map((_, i) => (
-                          <span key={i} className={`${T.fmMark} ${i % 5 === 0 ? 'h-4 w-[2px]' : 'h-2 w-[1px]'}`} />
-                       ))}
-                       
-                       {/* Active needle for FM */}
-                       <span 
-                         className="absolute top-1/2 -translate-y-1/2 -ml-[1.5px] h-[2.5rem] w-[3px] bg-[#b0351b]/90 shadow-[0_0_5px_rgba(176,53,27,0.5)] z-10 pointer-events-none transition-all duration-1000 ease-in-out" 
-                         style={{ left: `${Math.max(0, Math.min(100, (currentFreqNumber - 76) / (108 - 76) * 100))}%` }}
-                       />
-                       <span 
-                         className="absolute top-1/2 -translate-y-[60%] -ml-[3px] h-3 w-[6px] bg-[#b0351b] pointer-events-none transition-all duration-1000 ease-in-out" 
-                         style={{ left: `${Math.max(0, Math.min(100, (currentFreqNumber - 76) / (108 - 76) * 100))}%` }}
-                       />
-                    </span>
-                    <span className="shrink-0">108</span>
-                  </div>
-                </div>
-
-                <div className="text-right leading-none w-1/4 shrink-0">
-                   <span className="text-[10px] uppercase text-[#666] font-sans block mb-1 whitespace-nowrap">Signal Strength</span>
-                   <div className="flex gap-1 h-4 items-end justify-end">
-                      <div className="w-1 h-full bg-[#b0351b]"></div>
-                      <div className="w-1 h-4/5 bg-[#b0351b]"></div>
-                      <div className="w-1 h-3/5 bg-[#b0351b]"></div>
-                      <div className="w-1 h-2/5 bg-[#666]"></div>
-                   </div>
-                </div>
-              </div>
-
-              {/* Bottom row: Progress Bar */}
-              <div className="flex-1 relative z-10">
-                <span className="text-[10px] uppercase text-[#666] font-sans block mb-2 tracking-widest whitespace-nowrap relative -top-1">Playback Progress</span>
-                <div className={`flex justify-between items-center ${isLight ? 'text-[#899c75]' : 'text-de-muted'} font-oswald text-xs gap-[2px] opacity-70 w-full relative`}>
-                  <span className="w-10 shrink-0">{formatTime(currentTime)}</span>
-                  {/* Tick marks container */}
-                  <div
-                    ref={progressRef}
-                    onPointerDown={handleProgressPointerDown}
-                    onKeyDown={handleProgressKeyDown}
-                    className="flex-1 h-8 -my-2 relative flex items-center justify-between px-2 cursor-ew-resize touch-none min-w-[100px]"
-                    role="slider"
-                    aria-label="Playback progress"
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={Math.round(progressRatio * 100)}
-                    tabIndex={0}
-                  >
-                    {[...Array(41)].map((_, i) => <div key={i} className={`w-[1px] ${i % 10 === 0 ? 'h-3' : 'h-2'} ${isLight ? 'bg-[#899c75]/30' : 'bg-de-muted/40'}`} />)}
-                    {/* Active needle for progress */}
-                    <span 
-                      className={`absolute top-[-0.5rem] h-[2rem] w-[3px] z-10 pointer-events-none flex flex-col justify-end items-center ${isLight ? 'bg-[#697d55]/90' : 'bg-white/90 shadow-[0_0_5px_rgba(255,255,255,0.5)]'}`} 
-                      style={{ left: `calc(8px + ${progressRatio * 100}% - 4px)`, transform: 'translateX(-50%)' }}
-                    >
-                      <span className={`h-2 w-[6px] absolute bottom-[-4px] ${isLight ? 'bg-[#618029]' : 'bg-white'}`} />
-                    </span>
-                  </div>
-                  <span className="w-10 text-right shrink-0">{formatTime(duration)}</span>
-                </div>
+          <div
+            className={`md:ml-[3.57%] md:w-[57.14%] flex-shrink-0 flex-none min-h-[600px] md:min-h-0 flex flex-col p-4 sm:p-8 md:pl-6 lg:pl-10 xl:pl-12 border-b md:border-b-0 md:border-r border-t-0 border-l-0 ${T.leftGradient} overflow-y-auto scrollbar-de`}
+          >
+            {/* Header Title */}
+            <div className="mb-8">
+              <h1 className="text-xs uppercase tracking-widest text-[#666] mb-2 font-sans font-bold">
+                收 音 机
+              </h1>
+              <div className="h-[2px] w-12 bg-de-orange mb-2"></div>
+              <div className="text-[10px] font-sans uppercase tracking-widest text-[#666]">
+                你把手搭在了老式收音机的旋钮上。
               </div>
             </div>
 
-            {/* Playlist (Frequency selector) */}
-            <div className="flex-1 max-h-48 flex flex-col gap-1 overflow-y-auto scrollbar-de pr-2 z-10 relative mt-4 pt-2">
-              
-              {isLoadingPlaylist && (
-                <div className={`w-full text-center py-[10px] font-serif text-sm ${T.playlistItemInactive}`}>
-                  数据加载中...
-                </div>
-              )}
-              {playlistError && (
-                <div className="w-full text-center py-[10px] font-serif text-sm text-[#b0351b]">
-                  {playlistError}
-                </div>
-              )}
-
-              {!isLoadingPlaylist && (
-                <>
-                  {(() => {
-                    return sortedAlbums.map(album => {
-                       const expanded = expandedAlbums[album] !== false; // default to true if not explicitly set
-                       const { tracks, freq, color: colorClass } = groupedPlaylist[album];
-                       
-                       return (
-                         <div key={album} className="flex flex-col gap-1">
-                           <button 
-                             onClick={() => toggleAlbum(album)}
-                             className={`w-full text-left flex items-center justify-between px-2 py-[4px] font-serif transition-colors font-black ${T.playlistHeader} ${album !== sortedAlbums[0] ? 'mt-2' : ''}`}
-                           >
-                             <div className="flex gap-4 items-center">
-                               <span className={`font-oswald w-10 ${colorClass}`}>{freq}</span>
-                               <span className="tracking-widest flex items-center gap-2">
-                                 {album}
-                                 <span onClick={(e) => toggleStar(e, album)} className="outline-none flex items-center cursor-pointer">
-                                   <Star size={14} className={`${starredAlbums[album] ? 'fill-current' : ''} ${colorClass} transition-colors`} />
-                                 </span>
-                               </span>
-                             </div>
-                             <span className="text-sm">{expanded ? '▼' : '▶'}</span>
-                           </button>
-
-                           {expanded && tracks.map(({track, index}, i) => {
-                             const isActive = index === currentTrackIdx;
-                             return (
-                               <button 
-                                 key={track.id}
-                                 onClick={() => playIndex(index)}
-                                 className={`w-full text-left flex items-center justify-between px-2 py-[4px] font-serif transition-colors pl-8 ${isActive ? T.playlistItemActive : T.playlistItemInactive}`}
-                               >
-                                 <div className="flex gap-4 items-center">
-                                   <span className={`font-oswald w-6 ${isActive ? colorClass : T.playlistNumInactive}`}>{(i+1).toString().padStart(2, '0')}</span>
-                                   <span className="tracking-widest text-sm">{track.title}</span>
-                                 </div>
-                               </button>
-                             );
-                           })}
-                           {expanded && tracks.length === 0 && (
-                              <div className="w-full text-left flex items-center gap-4 px-2 py-[4px] font-serif text-de-muted/80 pl-8">
-                                <span className="tracking-widest text-sm italic">暂无频率信号...</span>
-                              </div>
-                           )}
-                         </div>
-                       );
-                    });
-                  })()}
-                  
-                  {[...Array(5)].map((_, i) => (
-                    <div key={`noise-${i}`} className="w-full text-left flex items-center gap-4 px-2 py-[4px] font-serif text-de-muted/40 cursor-not-allowed">
-                      <span className="font-oswald w-10 text-center">??</span>
-                      <span className="tracking-widest">未知电台静电噪音</span>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-
-            {/* Information & Controls Area */}
-            <div className={`mt-6 pt-4 border-t ${isLight ? 'border-[#b5af9f]' : 'border-[#4a4a4a]'} flex flex-wrap justify-center md:justify-between items-start gap-y-6 z-10 relative w-full`}>
-              
-              {/* Left side knobs */}
-              <div className="flex gap-2 lg:gap-5 px-2 lg:px-4 flex-shrink-0">
-                <Knob label="音 量" value={volume} onChange={(v) => setVolume(v)} isVolume isLight={isLight} />
-                <Knob label="调 谐" value={progressRatio} onChange={seekToRatio} isLight={isLight} />
-                <Knob 
-                  label="调 频" 
-                  value={(currentFreqNumber - 76) / (108 - 76)} 
-                  onChange={handleFreqChange} 
-                  isLight={isLight} 
-                />
-              </div>
-              
-              {/* Play Controls - Radio Buttons */}
-              <div className="flex flex-col gap-1.5 justify-center md:items-end items-center mr-2 lg:mr-8 flex-1 min-w-[260px]">
-                {/* Utility Row */}
-                <div className="flex w-[155px] justify-between items-center mt-2 px-1">
-                    <button onClick={() => setIsTapeModalOpen(true)} className={`w-8 h-8 flex items-center justify-center border-t border-l border-b-2 border-r-2 transition-all active:scale-95 ${T.btnRandInactive}`} title="弹出磁带">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="rotate-180"><path d="M12 4l-8 10h16z"/><path d="M4 18h16v2H4z"/></svg>
-                    </button>
-
-                    {/* Play Mode Buttons */}
-                    <div className="flex gap-[2px]">
-                       <button onClick={() => setPlayMode('rand')} className={`w-8 h-8 flex items-center justify-center border-t border-l transition-all outline-none ${playMode === 'rand' ? 'border-b border-r translate-x-[1px] translate-y-[1px] ' + T.btnRandActive : 'border-b-2 border-r-2 active:scale-95 ' + T.btnRandInactive}`} title="随机播放">
-                         <Shuffle size={14} />
-                       </button>
-                       <button onClick={() => setPlayMode('seq')} className={`w-8 h-8 flex items-center justify-center border-t border-l transition-all outline-none ${playMode === 'seq' ? 'border-b border-r translate-x-[1px] translate-y-[1px] ' + T.btnRandActive : 'border-b-2 border-r-2 active:scale-95 ' + T.btnRandInactive}`} title="列表循环">
-                         <Repeat size={14} />
-                       </button>
-                       <button onClick={() => setPlayMode('loop')} className={`w-8 h-8 flex items-center justify-center border-t border-l transition-all outline-none ${playMode === 'loop' ? 'border-b border-r translate-x-[1px] translate-y-[1px] ' + T.btnRandActive : 'border-b-2 border-r-2 active:scale-95 ' + T.btnRandInactive}`} title="单曲循环">
-                         <Repeat1 size={14} />
-                       </button>
-                    </div>
-                </div>
-
-                {/* Primary Media Buttons (Hardware aesthetic) */}
-                <div className={`flex justify-between gap-1 p-1 rounded-sm shadow-inner border w-[155px] ${T.playBtnWrap}`}>
-                  <button onClick={handlePrevTrack} className={`w-[42px] h-8 border-t border-l border-b-2 border-r-2 flex items-center justify-center transition-all outline-none active:scale-95 ${T.playSecondary}`} title="上一首">
-                    <SkipBack size={16} fill="currentColor" />
-                  </button>
-                  
-                  <button onClick={togglePlay} className={`w-[53px] h-8 border-t border-l border-b-[3px] border-r-[3px] flex items-center justify-center transition-all active:scale-95 shadow-lg outline-none ${isPlaying ? T.playActive : T.playInactive}`} title={isPlaying ? "暂停" : "播放"}>
-                    {isPlaying ? <Pause size={18} fill="currentColor"/> : <Play size={18} fill="currentColor" />}
-                  </button>
-
-                  <button onClick={handleTrackEnded} className={`w-[42px] h-8 border-t border-l border-b-2 border-r-2 flex items-center justify-center transition-all outline-none active:scale-95 ${T.playSecondary}`} title="下一首">
-                    <SkipForward size={16} fill="currentColor" />
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            {/* Status light (Bottom left) */}
-            <div className="absolute bottom-4 left-4 flex items-center gap-3">
-              <div 
-                className={`w-2 h-2 rounded-full transition-all duration-500 ${isPlaying ? 'bg-de-orange shadow-[0_0_8px_#d85c27]' : (isLight ? 'bg-de-orange/30 shadow-inner' : 'bg-red-900 shadow-inner')}`} 
-                title={isPlaying ? "播放中" : "已暂停"}
-              />
-            </div>
-            
-            {/* Theme Switch (Bottom right) */}
-            <div className="absolute bottom-4 right-4 flex items-center gap-3 z-50">
-              <button 
-                onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
-                className={`w-8 h-4 relative transition-colors duration-500 cursor-pointer active:scale-95 shadow-inner border-t border-b overflow-hidden rounded-sm ${isLight ? 'bg-[#618029] border-[#899c75] border-b-[#354518]' : 'bg-[#444] border-[#222] border-t-white/30 border-b-black/80'}`}
-                title="切换视觉方案 (Kim & Harry)"
+            {/* Radio Chassis */}
+            <div className="flex-1 flex flex-col items-center justify-center min-h-[400px]">
+              <div
+                ref={chassisRef}
+                className={`w-full ${T.chassis} rounded-sm p-4 sm:p-6 lg:p-8 shadow-2xl flex flex-col relative overflow-hidden transition-colors duration-500`}
               >
-                <div className={`absolute top-0 bottom-0 w-1/2 transition-all duration-500 ${isLight ? 'translate-x-full bg-[#b0351b]' : 'translate-x-0 bg-black/40'}`} />
-              </button>
+                {/* Grime overlay removed */}
+
+                {/* Dial & Frequencies */}
+                <div
+                  className={`${T.dialBg} border-2 p-6 mb-6 relative overflow-hidden shadow-inner flex flex-col gap-4 transition-colors duration-500`}
+                >
+                  <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none bg-[radial-gradient(circle_at_center,_#fff_0%,_transparent_100%)]"></div>
+
+                  {/* Top row: Frequency & Signal */}
+                  <div
+                    className={`flex justify-between items-end border-b pb-4 relative z-10 ${isLight ? "border-[#b5af9f]" : "border-[#2a2c31]"}`}
+                  >
+                    <div className="flex flex-col shrink-0">
+                      <span className="text-[10px] uppercase text-[#b0351b] font-sans font-bold tracking-tighter whitespace-nowrap">
+                        Frequency
+                      </span>
+                      <span
+                        className={`text-5xl font-mono tracking-tighter transition-colors ${T.freqText} whitespace-nowrap`}
+                      >
+                        {currentFreq}
+                        <span className="text-xl">FM</span>
+                      </span>
+                    </div>
+
+                    {/* Visual Dial (FM marks) */}
+                    <div className="flex-1 mx-6 mb-[1.1rem]">
+                      <div
+                        className={`flex items-center ${isLight ? "text-[#899c75]" : "text-de-muted"} font-oswald text-xs opacity-70 w-full relative`}
+                      >
+                        <span className="shrink-0">76</span>
+                        <span
+                          className={`flex-1 mx-3 min-w-[40px] h-[1px] ${isLight ? "bg-[#899c75]" : "bg-de-muted"} relative flex justify-between items-center`}
+                        >
+                          {[...Array(31)].map((_, i) => (
+                            <span
+                              key={i}
+                              className={`${T.fmMark} ${i % 5 === 0 ? "h-4 w-[2px]" : "h-2 w-[1px]"}`}
+                            />
+                          ))}
+
+                          {/* Active needle for FM */}
+                          <span
+                            className="absolute top-1/2 -translate-y-1/2 -ml-[1.5px] h-[2.5rem] w-[3px] bg-[#b0351b]/90 shadow-[0_0_5px_rgba(176,53,27,0.5)] z-10 pointer-events-none transition-all duration-1000 ease-in-out"
+                            style={{
+                              left: `${Math.max(0, Math.min(100, ((currentFreqNumber - 76) / (108 - 76)) * 100))}%`,
+                            }}
+                          />
+                          <span
+                            className="absolute top-1/2 -translate-y-[60%] -ml-[3px] h-3 w-[6px] bg-[#b0351b] pointer-events-none transition-all duration-1000 ease-in-out"
+                            style={{
+                              left: `${Math.max(0, Math.min(100, ((currentFreqNumber - 76) / (108 - 76)) * 100))}%`,
+                            }}
+                          />
+                        </span>
+                        <span className="shrink-0">108</span>
+                      </div>
+                    </div>
+
+                    <div className="text-right leading-none w-1/4 shrink-0">
+                      <span className="text-[10px] uppercase text-[#666] font-sans block mb-1 whitespace-nowrap">
+                        Signal Strength
+                      </span>
+                      <div className="flex gap-1 h-4 items-end justify-end">
+                        <div className="w-1 h-full bg-[#b0351b]"></div>
+                        <div className="w-1 h-4/5 bg-[#b0351b]"></div>
+                        <div className="w-1 h-3/5 bg-[#b0351b]"></div>
+                        <div className="w-1 h-2/5 bg-[#666]"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom row: Progress Bar */}
+                  <div className="flex-1 relative z-10">
+                    <span className="text-[10px] uppercase text-[#666] font-sans block mb-2 tracking-widest whitespace-nowrap relative -top-1">
+                      Playback Progress
+                    </span>
+                    <div
+                      className={`flex justify-between items-center ${isLight ? "text-[#899c75]" : "text-de-muted"} font-oswald text-xs gap-[2px] opacity-70 w-full relative`}
+                    >
+                      <span className="w-10 shrink-0">
+                        {formatTime(currentTime)}
+                      </span>
+                      {/* Tick marks container */}
+                      <div
+                        ref={progressRef}
+                        onPointerDown={handleProgressPointerDown}
+                        onKeyDown={handleProgressKeyDown}
+                        className="flex-1 h-8 -my-2 relative flex items-center justify-between px-2 cursor-ew-resize touch-none min-w-[100px]"
+                        role="slider"
+                        aria-label="Playback progress"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={Math.round(progressRatio * 100)}
+                        tabIndex={0}
+                      >
+                        {[...Array(41)].map((_, i) => (
+                          <div
+                            key={i}
+                            className={`w-[1px] ${i % 10 === 0 ? "h-3" : "h-2"} ${isLight ? "bg-[#899c75]/30" : "bg-de-muted/40"}`}
+                          />
+                        ))}
+                        {/* Active needle for progress */}
+                        <span
+                          className={`absolute top-[-0.5rem] h-[2rem] w-[3px] z-10 pointer-events-none flex flex-col justify-end items-center ${isLight ? "bg-[#697d55]/90" : "bg-white/90 shadow-[0_0_5px_rgba(255,255,255,0.5)]"}`}
+                          style={{
+                            left: `calc(8px + ${progressRatio * 100}% - 4px)`,
+                            transform: "translateX(-50%)",
+                          }}
+                        >
+                          <span
+                            className={`h-2 w-[6px] absolute bottom-[-4px] ${isLight ? "bg-[#618029]" : "bg-white"}`}
+                          />
+                        </span>
+                      </div>
+                      <span className="w-10 text-right shrink-0">
+                        {formatTime(duration)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Playlist (Frequency selector) */}
+                <div className="flex-1 max-h-48 flex flex-col gap-1 overflow-y-auto scrollbar-de pr-2 z-10 relative mt-4 pt-2">
+                  {isLoadingPlaylist && (
+                    <div
+                      className={`w-full text-center py-[10px] font-serif text-sm ${T.playlistItemInactive}`}
+                    >
+                      数据加载中...
+                    </div>
+                  )}
+                  {playlistError && (
+                    <div className="w-full text-center py-[10px] font-serif text-sm text-[#b0351b]">
+                      {playlistError}
+                    </div>
+                  )}
+
+                  {!isLoadingPlaylist && (
+                    <>
+                      {(() => {
+                        return sortedAlbums.map((album) => {
+                          const expanded = expandedAlbums[album] !== false; // default to true if not explicitly set
+                          const {
+                            tracks,
+                            freq,
+                            color: colorClass,
+                          } = groupedPlaylist[album];
+
+                          return (
+                            <div key={album} className="flex flex-col gap-1">
+                              <button
+                                onClick={() => toggleAlbum(album)}
+                                className={`w-full text-left flex items-center justify-between px-2 py-[4px] font-serif transition-colors font-black ${T.playlistHeader} ${album !== sortedAlbums[0] ? "mt-2" : ""}`}
+                              >
+                                <div className="flex gap-4 items-center">
+                                  <span
+                                    className={`font-oswald w-10 ${colorClass}`}
+                                  >
+                                    {freq}
+                                  </span>
+                                  <span className="tracking-widest flex items-center gap-2">
+                                    {album}
+                                    <span
+                                      onClick={(e) => toggleStar(e, album)}
+                                      className="outline-none flex items-center cursor-pointer"
+                                    >
+                                      <Star
+                                        size={14}
+                                        className={`${starredAlbums[album] ? "fill-current" : ""} ${colorClass} transition-colors`}
+                                      />
+                                    </span>
+                                  </span>
+                                </div>
+                                <span className="text-sm">
+                                  {expanded ? "▼" : "▶"}
+                                </span>
+                              </button>
+
+                              {expanded &&
+                                tracks.map(({ track, index }, i) => {
+                                  const isActive = index === currentTrackIdx;
+                                  return (
+                                    <button
+                                      key={track.id}
+                                      onClick={() => playIndex(index)}
+                                      className={`w-full text-left flex items-center justify-between px-2 py-[4px] font-serif transition-colors pl-8 ${isActive ? T.playlistItemActive : T.playlistItemInactive}`}
+                                    >
+                                      <div className="flex gap-4 items-center">
+                                        <span
+                                          className={`font-oswald w-6 ${isActive ? colorClass : T.playlistNumInactive}`}
+                                        >
+                                          {(i + 1).toString().padStart(2, "0")}
+                                        </span>
+                                        <span className="tracking-widest text-sm">
+                                          {track.title}
+                                        </span>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              {expanded && tracks.length === 0 && (
+                                <div className="w-full text-left flex items-center gap-4 px-2 py-[4px] font-serif text-de-muted/80 pl-8">
+                                  <span className="tracking-widest text-sm italic">
+                                    暂无频率信号...
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        });
+                      })()}
+
+                      {[...Array(5)].map((_, i) => (
+                        <div
+                          key={`noise-${i}`}
+                          className="w-full text-left flex items-center gap-4 px-2 py-[4px] font-serif text-de-muted/40 cursor-not-allowed"
+                        >
+                          <span className="font-oswald w-10 text-center">
+                            ??
+                          </span>
+                          <span className="tracking-widest">
+                            未知电台静电噪音
+                          </span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+
+                {/* Information & Controls Area */}
+                <div
+                  className={`mt-6 pt-4 border-t ${isLight ? "border-[#b5af9f]" : "border-[#4a4a4a]"} flex flex-wrap justify-center md:justify-between items-start gap-y-6 z-10 relative w-full`}
+                >
+                  {/* Left side knobs */}
+                  <div className="flex gap-2 lg:gap-5 px-2 lg:px-4 flex-shrink-0">
+                    <Knob
+                      label="音 量"
+                      value={volume}
+                      onChange={(v) => setVolume(v)}
+                      isVolume
+                      isLight={isLight}
+                    />
+                    <Knob
+                      label="调 谐"
+                      value={progressRatio}
+                      onChange={seekToRatio}
+                      isLight={isLight}
+                    />
+                    <Knob
+                      label="调 频"
+                      value={(currentFreqNumber - 76) / (108 - 76)}
+                      onChange={handleFreqChange}
+                      isLight={isLight}
+                    />
+                  </div>
+
+                  {/* Play Controls - Radio Buttons */}
+                  <div className="flex flex-col gap-1.5 justify-center md:items-end items-center mr-2 lg:mr-8 flex-1 min-w-[260px]">
+                    {/* Utility Row */}
+                    <div className="flex w-[155px] justify-between items-center mt-2 px-1">
+                      <button
+                        onClick={() => setIsTapeModalOpen(true)}
+                        className={`w-8 h-8 flex items-center justify-center border-t border-l border-b-2 border-r-2 transition-all active:scale-95 ${T.btnRandInactive}`}
+                        title="弹出磁带"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="rotate-180"
+                        >
+                          <path d="M12 4l-8 10h16z" />
+                          <path d="M4 18h16v2H4z" />
+                        </svg>
+                      </button>
+
+                      {/* Play Mode Buttons */}
+                      <div className="flex gap-[2px]">
+                        <button
+                          onClick={() => setPlayMode("rand")}
+                          className={`w-8 h-8 flex items-center justify-center border-t border-l transition-all outline-none ${playMode === "rand" ? "border-b border-r translate-x-[1px] translate-y-[1px] " + T.btnRandActive : "border-b-2 border-r-2 active:scale-95 " + T.btnRandInactive}`}
+                          title="随机播放"
+                        >
+                          <Shuffle size={14} />
+                        </button>
+                        <button
+                          onClick={() => setPlayMode("seq")}
+                          className={`w-8 h-8 flex items-center justify-center border-t border-l transition-all outline-none ${playMode === "seq" ? "border-b border-r translate-x-[1px] translate-y-[1px] " + T.btnRandActive : "border-b-2 border-r-2 active:scale-95 " + T.btnRandInactive}`}
+                          title="列表循环"
+                        >
+                          <Repeat size={14} />
+                        </button>
+                        <button
+                          onClick={() => setPlayMode("loop")}
+                          className={`w-8 h-8 flex items-center justify-center border-t border-l transition-all outline-none ${playMode === "loop" ? "border-b border-r translate-x-[1px] translate-y-[1px] " + T.btnRandActive : "border-b-2 border-r-2 active:scale-95 " + T.btnRandInactive}`}
+                          title="单曲循环"
+                        >
+                          <Repeat1 size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Primary Media Buttons (Hardware aesthetic) */}
+                    <div
+                      className={`flex justify-between gap-1 p-1 rounded-sm shadow-inner border w-[155px] ${T.playBtnWrap}`}
+                    >
+                      <button
+                        onClick={handlePrevTrack}
+                        className={`w-[42px] h-8 border-t border-l border-b-2 border-r-2 flex items-center justify-center transition-all outline-none active:scale-95 ${T.playSecondary}`}
+                        title="上一首"
+                      >
+                        <SkipBack size={16} fill="currentColor" />
+                      </button>
+
+                      <button
+                        onClick={togglePlay}
+                        className={`w-[53px] h-8 border-t border-l border-b-[3px] border-r-[3px] flex items-center justify-center transition-all active:scale-95 shadow-lg outline-none ${isPlaying ? T.playActive : T.playInactive}`}
+                        title={isPlaying ? "暂停" : "播放"}
+                      >
+                        {isPlaying ? (
+                          <Pause size={18} fill="currentColor" />
+                        ) : (
+                          <Play size={18} fill="currentColor" />
+                        )}
+                      </button>
+
+                      <button
+                        onClick={handleTrackEnded}
+                        className={`w-[42px] h-8 border-t border-l border-b-2 border-r-2 flex items-center justify-center transition-all outline-none active:scale-95 ${T.playSecondary}`}
+                        title="下一首"
+                      >
+                        <SkipForward size={16} fill="currentColor" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status light (Bottom left) */}
+                <div className="absolute bottom-4 left-4 flex items-center gap-3">
+                  <div
+                    className={`w-2 h-2 rounded-full transition-all duration-500 ${isPlaying ? "bg-de-orange shadow-[0_0_8px_#d85c27]" : isLight ? "bg-de-orange/30 shadow-inner" : "bg-red-900 shadow-inner"}`}
+                    title={isPlaying ? "播放中" : "已暂停"}
+                  />
+                </div>
+
+                {/* Theme Switch (Bottom right) */}
+                <div className="absolute bottom-4 right-4 flex items-center gap-3 z-50">
+                  <button
+                    onClick={() =>
+                      setTheme((t) => (t === "dark" ? "light" : "dark"))
+                    }
+                    className={`w-8 h-4 relative transition-colors duration-500 cursor-pointer active:scale-95 shadow-inner border-t border-b overflow-hidden rounded-sm ${isLight ? "bg-[#618029] border-[#899c75] border-b-[#354518]" : "bg-[#444] border-[#222] border-t-white/30 border-b-black/80"}`}
+                    title="切换视觉方案 (Kim & Harry)"
+                  >
+                    <div
+                      className={`absolute top-0 bottom-0 w-1/2 transition-all duration-500 ${isLight ? "translate-x-full bg-[#b0351b]" : "translate-x-0 bg-black/40"}`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT PANEL : Dialogue / Lyrics Log (3/7 of screen on desktop) */}
+          <div
+            className={`md:w-[32.14%] flex flex-col flex-none min-h-[400px] md:min-h-0 md:h-full p-4 sm:p-8 md:pr-6 lg:pr-10 xl:pr-12 md:border-r border-t-0 border-r-0 border-b-0 ${isLight ? "border-[#b5af9f]" : "border-[#2a2c31]"} overflow-hidden relative ${T.rightBg}`}
+          >
+            {/* Spacer to align with left panel's control module perfectly */}
+            <div
+              className="hidden md:block mb-8 opacity-0 pointer-events-none select-none"
+              aria-hidden="true"
+            >
+              <h1 className="text-xs uppercase tracking-widest text-[#666] mb-2 font-sans font-bold">
+                收 音 机
+              </h1>
+              <div className="h-[2px] w-12 bg-de-orange mb-2"></div>
+              <div className="text-[10px] font-sans uppercase tracking-widest text-[#666]">
+                你把手搭在了老式收音机的旋钮上。
+              </div>
             </div>
 
-          </div>
-          </div>
-        </div>
-
-        {/* RIGHT PANEL : Dialogue / Lyrics Log (3/7 of screen on desktop) */}
-        <div className={`md:w-[32.14%] flex flex-col flex-none min-h-[400px] md:min-h-0 md:h-full p-4 sm:p-8 md:pr-6 lg:pr-10 xl:pr-12 md:border-r border-t-0 border-r-0 border-b-0 ${isLight ? 'border-[#b5af9f]' : 'border-[#2a2c31]'} overflow-hidden relative ${T.rightBg}`}>
-           
-           {/* Spacer to align with left panel's control module perfectly */}
-           <div className="hidden md:block mb-8 opacity-0 pointer-events-none select-none" aria-hidden="true">
-             <h1 className="text-xs uppercase tracking-widest text-[#666] mb-2 font-sans font-bold">
-               收 音 机
-             </h1>
-             <div className="h-[2px] w-12 bg-de-orange mb-2"></div>
-             <div className="text-[10px] font-sans uppercase tracking-widest text-[#666]">
-               你把手搭在了老式收音机的旋钮上。
-             </div>
-           </div>
-
-           <div className="flex-1 flex flex-col items-center justify-center min-h-[400px]">
-             <div className="w-full flex flex-col relative" style={{ height: chassisHeight ? `${chassisHeight}px` : '100%' }}>
-               {/* Current Track Info Header - Designed like a Skill context block */}
-               <div className="mb-4">
-                 <div className="flex flex-col font-serif">
-                    <span className={`${groupedPlaylist[currentAlbum]?.color || 'text-de-orange'} font-bold text-2xl tracking-wider leading-tight mb-3 whitespace-pre-line drop-shadow-sm transition-colors duration-500`}>
-                      {currentTrack.title}
-                    </span>
-                    <div className="flex flex-col gap-1">
-                      <span className={`${T.rightPanelSub} text-sm tracking-wide flex transition-colors duration-500`}>
-                        <span className="inline-block w-[95px] font-bold shrink-0 whitespace-pre">{currentTrack.originalLabel || "[ORIGINAL]"}</span>
-                        <span className={`${T.rightPanelVal}`}>{currentTrack.artist}</span>
+            <div className="flex-1 flex flex-col items-center justify-center min-h-[400px]">
+              <div
+                className="w-full flex flex-col relative"
+                style={{
+                  height: chassisHeight ? `${chassisHeight}px` : "100%",
+                }}
+              >
+                {/* Current Track Info Header - Designed like a Skill context block */}
+                <div className="mb-4">
+                  <div className="flex flex-row justify-between items-start">
+                    <div className="flex flex-col font-serif">
+                      <span
+                        className={`${groupedPlaylist[currentAlbum]?.color || "text-de-orange"} font-bold text-2xl tracking-wider leading-tight mb-3 whitespace-pre-line drop-shadow-sm transition-colors duration-500`}
+                      >
+                        {currentTrack.title}
                       </span>
-                      {currentTrack.coverLabel && currentTrack.coverArtist && (
-                        <span className={`${T.rightPanelSub} text-sm tracking-wide flex transition-colors duration-500`}>
-                          <span className="inline-block w-[95px] font-bold shrink-0 whitespace-pre">{currentTrack.coverLabel}</span>
-                          <span className={`${T.rightPanelVal}`}>{currentTrack.coverArtist}</span>
+                      <div className="flex flex-col gap-1">
+                        <span
+                          className={`${T.rightPanelSub} text-sm tracking-wide flex transition-colors duration-500`}
+                        >
+                          <span className="inline-block w-[95px] font-bold shrink-0 whitespace-pre">
+                            {currentTrack.originalLabel || "[ORIGINAL]"}
+                          </span>
+                          <span className={`${T.rightPanelVal}`}>
+                            {currentTrack.artist}
+                          </span>
                         </span>
-                      )}
+                        {currentTrack.coverLabel &&
+                          currentTrack.coverArtist && (
+                            <span
+                              className={`${T.rightPanelSub} text-sm tracking-wide flex transition-colors duration-500`}
+                            >
+                              <span className="inline-block w-[95px] font-bold shrink-0 whitespace-pre">
+                                {currentTrack.coverLabel}
+                              </span>
+                              <span className={`${T.rightPanelVal}`}>
+                                {currentTrack.coverArtist}
+                              </span>
+                            </span>
+                          )}
+                      </div>
                     </div>
-                 </div>
-               </div>
 
-               <div className={`h-px bg-gradient-to-r ${isLight ? 'from-transparent via-[#8c8678] to-transparent' : 'from-transparent via-white/20 to-transparent'} w-full mb-6`} />
+                    {/* LRC Mode Toggle */}
+                    <div
+                      className="flex flex-col gap-2 mt-2.5 z-20 shrink-0 ml-2"
+                      title="Toggle Bilingual Lyrics"
+                    >
+                      <button
+                        onClick={() =>
+                          setLrcMode((prev) =>
+                            prev === "bilingual" ? "original" : "bilingual",
+                          )
+                        }
+                        className={`text-[10px] px-2 py-0.5 font-sans font-bold tracking-wider transition-colors rounded-sm border ${lrcMode === "bilingual" ? (isLight ? "bg-[#b0351b] text-white border-[#b0351b]" : "bg-de-orange text-white border-de-orange") : isLight ? "bg-black/5 text-[#8c8678] border-[#8c8678]/30 hover:text-[#2a2b25]" : "bg-white/5 text-[#888] border-white/20 hover:text-[#e3e0d7]"}`}
+                      >
+                        译
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
-               {/* Lyrics Dialogue Stream */}
-               <div ref={lyricsContainerRef} className="flex-1 overflow-y-auto scrollbar-de pr-4 pb-2 relative space-y-4">
-                  
+                <div
+                  className={`h-px bg-gradient-to-r ${isLight ? "from-transparent via-[#8c8678] to-transparent" : "from-transparent via-white/20 to-transparent"} w-full mb-6`}
+                />
+
+                {/* Lyrics Dialogue Stream */}
+                <div
+                  ref={lyricsContainerRef}
+                  className="flex-1 overflow-y-auto scrollbar-de pr-4 pb-2 relative space-y-4"
+                >
                   {activeLyrics.length === 0 && (
-                    <div className={`${T.lyricSub} italic mt-10`}>信号微弱，未接收到文本数据...</div>
+                    <div className={`${T.lyricSub} italic mt-10`}>
+                      信号微弱，未接收到文本数据...
+                    </div>
                   )}
 
                   {activeLyrics.map((lyric, idx) => {
                     const isActive = idx === activeLyricIndex;
-                    
+
                     return (
-                      <div 
-                        key={idx} 
+                      <div
+                        key={idx}
                         id={`lyric-${idx}`}
-                        className={`flex flex-col gap-1 ${isActive ? 'opacity-100' : 'opacity-70'} transition-opacity duration-500 ease-in-out`}
+                        className={`flex flex-col gap-1 ${isActive ? "opacity-100" : "opacity-70"} transition-opacity duration-500 ease-in-out`}
                       >
-                         {lyric.time !== undefined && (
-                           <span 
-                             className={`font-bold text-sm tracking-wide cursor-pointer hover:underline ${isActive ? (lyric.speaker === '你' ? T.lyricYouSpeaker : T.lyricOthSpeaker) : T.lyricNorSpeaker}`}
-                             onClick={() => {
-                               if (audioRef.current) audioRef.current.currentTime = lyric.time as number;
-                               setCurrentTime(lyric.time as number);
-                             }}
-                           >
-                             [{formatLrcTime(lyric.time)}]
-                           </span>
-                         )}
-                         <p className={`leading-relaxed italic transition-colors duration-500 ${isActive ? `${T.lyricActiveText} text-lg not-italic font-bold` : T.lyricSub}`}>
-                           {lyric.text}
-                         </p>
+                        {lyric.time !== undefined && (
+                          <span
+                            className={`font-bold text-sm tracking-wide cursor-pointer hover:underline ${isActive ? (lyric.speaker === "你" ? T.lyricYouSpeaker : T.lyricOthSpeaker) : T.lyricNorSpeaker}`}
+                            onClick={() => {
+                              if (audioRef.current)
+                                audioRef.current.currentTime =
+                                  lyric.time as number;
+                              setCurrentTime(lyric.time as number);
+                            }}
+                          >
+                            [{formatLrcTime(lyric.time)}]
+                          </span>
+                        )}
+                        <p
+                          className={`leading-relaxed italic transition-colors duration-500 ${isActive ? `${T.lyricActiveText} text-lg not-italic font-bold` : T.lyricSub}`}
+                        >
+                          {lyric.text}
+                          {lyric.transText && (
+                            <span
+                              className={`block mt-1 ${isActive ? "opacity-90 text-[0.95em] font-normal not-italic" : "opacity-75 text-[0.9em]"}`}
+                            >
+                              {lyric.transText}
+                            </span>
+                          )}
+                        </p>
                       </div>
                     );
                   })}
-                  
+
                   {/* Optional: Decorator line moving down */}
                   {activeLyricIndex !== -1 && (
-                     <div className={`absolute left-[-1.5rem] top-0 bottom-0 w-px ${isLight ? 'bg-[#9c9484]' : 'bg-white/10'} hidden md:block`}>
-                        {/* A moving pip indicating current position relative to history could go here */}
-                     </div>
+                    <div
+                      className={`absolute left-[-1.5rem] top-0 bottom-0 w-px ${isLight ? "bg-[#9c9484]" : "bg-white/10"} hidden md:block`}
+                    >
+                      {/* A moving pip indicating current position relative to history could go here */}
+                    </div>
                   )}
-               </div>
-             </div>
-           </div>
+                </div>
+              </div>
+            </div>
 
-           {/* The bottom right specific UI (Like "Continue" button context in DE) */}
-           <div className={`absolute bottom-2 right-8 left-8 flex justify-end font-oswald tracking-widest text-sm pointer-events-none uppercase ${isLight ? 'text-[#8c8678]' : 'text-[#a0a0a0]'}`}>
-              {now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}  {now.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', weekday: 'short' })}
-           </div>
+            {/* The bottom right specific UI (Like "Continue" button context in DE) */}
+            <div
+              className={`absolute bottom-2 right-8 left-8 flex justify-end font-oswald tracking-widest text-sm pointer-events-none uppercase ${isLight ? "text-[#8c8678]" : "text-[#a0a0a0]"}`}
+            >
+              {now.toLocaleTimeString("zh-CN", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}{" "}
+              {now.toLocaleDateString("zh-CN", {
+                month: "short",
+                day: "numeric",
+                weekday: "short",
+              })}
+            </div>
+          </div>
         </div>
-
       </div>
-    </div>
       {isTapeModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#111]/80 backdrop-blur-sm px-4">
-           <div className="relative w-full max-w-[320px] sm:max-w-md flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
-             
-             {/* Reel-To-Reel Container */}
-             <div className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] flex items-center justify-center mb-4 mt-8 drop-shadow-2xl">
-                
-                {/* 3D Base/Shadow of the Reel */}
-                <div className="absolute w-[95%] h-[95%] rounded-full bg-[#050a0c] translate-y-2 translate-x-1" />
+          <div className="relative w-full max-w-[320px] sm:max-w-md flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
+            {/* Reel-To-Reel Container */}
+            <div className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] flex items-center justify-center mb-4 mt-8 drop-shadow-2xl">
+              {/* 3D Base/Shadow of the Reel */}
+              <div className="absolute w-[95%] h-[95%] rounded-full bg-[#050a0c] translate-y-2 translate-x-1" />
 
-                {/* Magnetic Tape Spool (Brown) inside */}
-                <div className="absolute w-[78%] h-[78%] rounded-full bg-[#462d1c] flex items-center justify-center shadow-[inset_0_5px_15px_rgba(0,0,0,0.8)] border-4 border-[#2b1b10]">
-                   {/* Tape wind grooves */}
-                   <div className="absolute inset-0 rounded-full border border-[#593b27] m-2 opacity-40"></div>
-                   <div className="absolute inset-0 rounded-full border border-[#593b27] m-4 opacity-30"></div>
-                   <div className="absolute inset-0 rounded-full border border-[#2b1b10] m-6 opacity-60"></div>
-                   <div className="absolute inset-0 rounded-full border border-[#593b27] m-8 opacity-20"></div>
-                   <div className="absolute inset-0 rounded-full border border-[#2b1b10] m-10 opacity-70"></div>
-                   <div className="absolute inset-0 rounded-full border border-[#593b27] m-[44px] opacity-50 border-2"></div>
-                </div>
+              {/* Magnetic Tape Spool (Brown) inside */}
+              <div className="absolute w-[78%] h-[78%] rounded-full bg-[#462d1c] flex items-center justify-center shadow-[inset_0_5px_15px_rgba(0,0,0,0.8)] border-4 border-[#2b1b10]">
+                {/* Tape wind grooves */}
+                <div className="absolute inset-0 rounded-full border border-[#593b27] m-2 opacity-40"></div>
+                <div className="absolute inset-0 rounded-full border border-[#593b27] m-4 opacity-30"></div>
+                <div className="absolute inset-0 rounded-full border border-[#2b1b10] m-6 opacity-60"></div>
+                <div className="absolute inset-0 rounded-full border border-[#593b27] m-8 opacity-20"></div>
+                <div className="absolute inset-0 rounded-full border border-[#2b1b10] m-10 opacity-70"></div>
+                <div className="absolute inset-0 rounded-full border border-[#593b27] m-[44px] opacity-50 border-2"></div>
+              </div>
 
-                {/* Metallic Teal Reel Face */}
-                <svg viewBox="0 0 100 100" className="absolute w-full h-full drop-shadow-md" style={{ transform: 'rotate(-10deg)' }}>
-                  <defs>
-                    <linearGradient id="reelGrad" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#325f75"/>
-                      <stop offset="35%" stopColor="#254a5c"/>
-                      <stop offset="70%" stopColor="#17313e"/>
-                      <stop offset="100%" stopColor="#0d1b22"/>
-                    </linearGradient>
-                    <linearGradient id="reelEdge" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#4a89a0"/>
-                      <stop offset="100%" stopColor="#0d1b22"/>
-                    </linearGradient>
-                    <mask id="reelCutouts">
-                      <circle cx="50" cy="50" r="50" fill="white" />
-                      {/* Central hole */}
-                      <circle cx="50" cy="50" r="14" fill="black" />
-                      {/* The 3 cutout holes. Circumference at r=31: 194.77. 194.77 / 3 = 64.92. StrokeDasharray: dash 26 + gap 38.92 */}
-                      <circle cx="50" cy="50" r="31" fill="none" stroke="black" strokeWidth="20" strokeLinecap="round" strokeDasharray="26 38.92" strokeDashoffset="18" />
-                    </mask>
-                  </defs>
+              {/* Metallic Teal Reel Face */}
+              <svg
+                viewBox="0 0 100 100"
+                className="absolute w-full h-full drop-shadow-md"
+                style={{ transform: "rotate(-10deg)" }}
+              >
+                <defs>
+                  <linearGradient id="reelGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#325f75" />
+                    <stop offset="35%" stopColor="#254a5c" />
+                    <stop offset="70%" stopColor="#17313e" />
+                    <stop offset="100%" stopColor="#0d1b22" />
+                  </linearGradient>
+                  <linearGradient id="reelEdge" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#4a89a0" />
+                    <stop offset="100%" stopColor="#0d1b22" />
+                  </linearGradient>
+                  <mask id="reelCutouts">
+                    <circle cx="50" cy="50" r="50" fill="white" />
+                    {/* Central hole */}
+                    <circle cx="50" cy="50" r="14" fill="black" />
+                    {/* The 3 cutout holes. Circumference at r=31: 194.77. 194.77 / 3 = 64.92. StrokeDasharray: dash 26 + gap 38.92 */}
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="31"
+                      fill="none"
+                      stroke="black"
+                      strokeWidth="20"
+                      strokeLinecap="round"
+                      strokeDasharray="26 38.92"
+                      strokeDashoffset="18"
+                    />
+                  </mask>
+                </defs>
 
-                  {/* Drop Shadow / Thickness of Reel Face */}
-                  <circle cx="50" cy="51.5" r="48" fill="#0a1217" mask="url(#reelCutouts)" />
-                  <circle cx="50.5" cy="50.5" r="48" fill="#0f1b21" mask="url(#reelCutouts)" />
-                  
-                  {/* Base Reel Face */}
-                  <circle cx="50" cy="50" r="48" fill="url(#reelGrad)" mask="url(#reelCutouts)" stroke="url(#reelEdge)" strokeWidth="0.5" />
-                  
-                  {/* Decorative indents on spokes */}
-                  {[0, 120, 240].map((deg, i) => (
-                    <g key={i} transform={`rotate(${deg + 45} 50 50)`}>
-                       <line x1="50" y1="5" x2="50" y2="9" stroke="#17313e" strokeWidth="1.5" strokeLinecap="round" opacity="0.8"/>
-                       <circle cx="50" cy="8.5" r="0.8" fill="#0d1b22" />
-                       <path d="M 46 25 Q 50 24 54 25" fill="none" stroke="#254a5c" strokeWidth="0.5" opacity="0.6"/>
-                    </g>
+                {/* Drop Shadow / Thickness of Reel Face */}
+                <circle
+                  cx="50"
+                  cy="51.5"
+                  r="48"
+                  fill="#0a1217"
+                  mask="url(#reelCutouts)"
+                />
+                <circle
+                  cx="50.5"
+                  cy="50.5"
+                  r="48"
+                  fill="#0f1b21"
+                  mask="url(#reelCutouts)"
+                />
+
+                {/* Base Reel Face */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="48"
+                  fill="url(#reelGrad)"
+                  mask="url(#reelCutouts)"
+                  stroke="url(#reelEdge)"
+                  strokeWidth="0.5"
+                />
+
+                {/* Decorative indents on spokes */}
+                {[0, 120, 240].map((deg, i) => (
+                  <g key={i} transform={`rotate(${deg + 45} 50 50)`}>
+                    <line
+                      x1="50"
+                      y1="5"
+                      x2="50"
+                      y2="9"
+                      stroke="#17313e"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      opacity="0.8"
+                    />
+                    <circle cx="50" cy="8.5" r="0.8" fill="#0d1b22" />
+                    <path
+                      d="M 46 25 Q 50 24 54 25"
+                      fill="none"
+                      stroke="#254a5c"
+                      strokeWidth="0.5"
+                      opacity="0.6"
+                    />
+                  </g>
+                ))}
+              </svg>
+
+              {/* Central Hub (Black) */}
+              <div className="absolute w-[34%] h-[34%] rounded-full bg-[#111] z-20 flex items-center justify-center shadow-[0_6px_15px_rgba(0,0,0,0.8)] border-2 border-[#1c2830]">
+                <div className="w-[85%] h-[85%] rounded-full bg-gradient-to-br from-[#2a2a2a] to-[#0a0a0a] flex items-center justify-center relative shadow-inner">
+                  {/* The 3 slots on the hub */}
+                  {[0, 120, 240].map((deg) => (
+                    <div
+                      key={deg}
+                      className="absolute w-[10%] h-[35%] bg-[#000] top-[50%] origin-top rounded-full shadow-[inset_0_2px_4px_rgba(0,0,0,0.9)]"
+                      style={{
+                        transform: `rotate(${deg + 15}deg) translateY(30%)`,
+                      }}
+                    ></div>
                   ))}
-                </svg>
-                
-                {/* Central Hub (Black) */}
-                <div className="absolute w-[34%] h-[34%] rounded-full bg-[#111] z-20 flex items-center justify-center shadow-[0_6px_15px_rgba(0,0,0,0.8)] border-2 border-[#1c2830]">
-                   <div className="w-[85%] h-[85%] rounded-full bg-gradient-to-br from-[#2a2a2a] to-[#0a0a0a] flex items-center justify-center relative shadow-inner">
-                     {/* The 3 slots on the hub */}
-                     {[0, 120, 240].map(deg => (
-                       <div key={deg} className="absolute w-[10%] h-[35%] bg-[#000] top-[50%] origin-top rounded-full shadow-[inset_0_2px_4px_rgba(0,0,0,0.9)]" style={{ transform: `rotate(${deg + 15}deg) translateY(30%)` }}></div>
-                     ))}
-                     
-                     {/* 3 small screws */}
-                     {[0, 120, 240].map(deg => (
-                       <div key={'s'+deg} className="absolute w-1.5 h-1.5 bg-[#444] rounded-full shadow-inner top-[50%] origin-top" style={{ transform: `rotate(${deg - 45}deg) translateY(-140%)` }}></div>
-                     ))}
-                     
-                     {/* Small center pin */}
-                     <div className="w-[45%] h-[45%] rounded-full bg-gradient-to-br from-[#8a857a] to-[#4a473e] shadow-[0_2px_6px_rgba(0,0,0,0.8)] z-10 flex items-center justify-center border border-[#333]">
-                        <div className="w-[30%] h-[30%] rounded-full bg-[#222] shadow-inner"></div>
-                        <div className="absolute w-full h-[1px] bg-black/40 rotate-45"></div>
-                     </div>
-                   </div>
-                </div>
 
-                {/* Lighting overlays to make it pop */}
-                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/10 to-transparent pointer-events-none z-30 mix-blend-screen mix-blend-overlay"></div>
-                <div className="absolute inset-0 rounded-full bg-gradient-to-bl from-black/60 to-transparent pointer-events-none z-30 mix-blend-multiply"></div>
+                  {/* 3 small screws */}
+                  {[0, 120, 240].map((deg) => (
+                    <div
+                      key={"s" + deg}
+                      className="absolute w-1.5 h-1.5 bg-[#444] rounded-full shadow-inner top-[50%] origin-top"
+                      style={{
+                        transform: `rotate(${deg - 45}deg) translateY(-140%)`,
+                      }}
+                    ></div>
+                  ))}
 
-                {/* Song Title Sticker Overlay */}
-                <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
-                  <div className="bg-[#e6e2d3] border-l-[6px] border-r-[4px] border-[#a39c89] px-4 py-1.5 shadow-[2px_6px_12px_rgba(0,0,0,0.6)] transform rotate-[8deg] translate-y-[65px] translate-x-4 inline-flex items-center justify-center opacity-[0.98] rounded-sm outline-dashed outline-1 outline-offset-[-3px] outline-[#aca590] after:absolute after:inset-0 after:bg-[url('https://www.transparenttextures.com/patterns/dust.png')] after:opacity-20 after:pointer-events-none max-w-[80%]">
-                     <span className="font-serif font-bold text-base sm:text-xl text-[#b0351b] uppercase tracking-widest leading-tight drop-shadow-sm text-center" style={{ fontFamily: '"Courier New", Courier, monospace' }}>
-                        {playlist[currentTrackIdx]?.title}
-                     </span>
+                  {/* Small center pin */}
+                  <div className="w-[45%] h-[45%] rounded-full bg-gradient-to-br from-[#8a857a] to-[#4a473e] shadow-[0_2px_6px_rgba(0,0,0,0.8)] z-10 flex items-center justify-center border border-[#333]">
+                    <div className="w-[30%] h-[30%] rounded-full bg-[#222] shadow-inner"></div>
+                    <div className="absolute w-full h-[1px] bg-black/40 rotate-45"></div>
                   </div>
                 </div>
-             </div>
+              </div>
 
-             {/* Controls */}
-             <div className="flex justify-center w-full mt-4 px-4 gap-6">
-               <button 
-                 className={`w-12 h-12 rounded-full bg-de-orange text-white flex items-center justify-center hover:bg-[#b0351b] transition-all shadow-lg active:scale-95`}
-                 onClick={() => {
-                   const a = document.createElement('a');
-                   a.href = playlist[currentTrackIdx]?.audioUrl;
-                   a.download = `${playlist[currentTrackIdx]?.title}.mp3`;
-                   a.click();
-                 }}
-                 title="Download"
-               >
-                 <Download size={20} />
-               </button>
-               <button 
-                 className={`w-12 h-12 rounded-full bg-[#2a2c31] text-white flex items-center justify-center hover:bg-black transition-all shadow-lg active:scale-95`}
-                 onClick={() => setIsTapeModalOpen(false)}
-                 title="Close"
-               >
-                 <X size={20} />
-               </button>
-             </div>
-           </div>
+              {/* Lighting overlays to make it pop */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/10 to-transparent pointer-events-none z-30 mix-blend-screen mix-blend-overlay"></div>
+              <div className="absolute inset-0 rounded-full bg-gradient-to-bl from-black/60 to-transparent pointer-events-none z-30 mix-blend-multiply"></div>
+
+              {/* Song Title Sticker Overlay */}
+              <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
+                <div className="bg-[#e6e2d3] border-l-[6px] border-r-[4px] border-[#a39c89] px-4 py-1.5 shadow-[2px_6px_12px_rgba(0,0,0,0.6)] transform rotate-[8deg] translate-y-[65px] translate-x-4 inline-flex items-center justify-center opacity-[0.98] rounded-sm outline-dashed outline-1 outline-offset-[-3px] outline-[#aca590] after:absolute after:inset-0 after:bg-[url('https://www.transparenttextures.com/patterns/dust.png')] after:opacity-20 after:pointer-events-none max-w-[80%]">
+                  <span
+                    className="font-serif font-bold text-base sm:text-xl text-[#b0351b] uppercase tracking-widest leading-tight drop-shadow-sm text-center"
+                    style={{ fontFamily: '"Courier New", Courier, monospace' }}
+                  >
+                    {playlist[currentTrackIdx]?.title}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex justify-center w-full mt-4 px-4 gap-6">
+              <button
+                className={`w-12 h-12 rounded-full bg-de-orange text-white flex items-center justify-center hover:bg-[#b0351b] transition-all shadow-lg active:scale-95`}
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = playlist[currentTrackIdx]?.audioUrl;
+                  a.download = `${playlist[currentTrackIdx]?.title}.mp3`;
+                  a.click();
+                }}
+                title="Download"
+              >
+                <Download size={20} />
+              </button>
+              <button
+                className={`w-12 h-12 rounded-full bg-[#2a2c31] text-white flex items-center justify-center hover:bg-black transition-all shadow-lg active:scale-95`}
+                onClick={() => setIsTapeModalOpen(false)}
+                title="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>
