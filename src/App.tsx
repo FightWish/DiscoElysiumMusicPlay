@@ -18,6 +18,8 @@ import {
   X,
 } from "lucide-react";
 import defaultPlaylist from "../playlist.json";
+import tapeReelImg from "../png/tape_melody_fixed_big.png";
+import { PagerPanel } from "./RadioMessages";
 // import defaultPlaylist from '../playlist.json';
 
 // --- Types & Data ---
@@ -46,7 +48,8 @@ interface Track {
   lrcTrans?: string;
 }
 
-const PLAYLIST_URL = 'https://kimkitsuragi.oss-cn-hangzhou.aliyuncs.com/svc_done/playlist.json';
+const PLAYLIST_URL =
+  "https://kimkitsuragi.oss-cn-hangzhou.aliyuncs.com/svc_done/playlist.json";
 // import localPlaylistUrl from "../playlist.json?url";
 // const PLAYLIST_URL = localPlaylistUrl;
 
@@ -142,11 +145,18 @@ function Knob({
   return (
     <div className="flex flex-col items-center gap-1">
       <div
-        className={`w-16 h-16 rounded-full border-4 ${isLight ? "border-[#b5af9f] bg-[#e8e4db]" : "border-[#3a3d45] bg-[#121417]"} relative flex items-center justify-center shadow-inner touch-none transition-transform ${inactive ? "opacity-70" : "cursor-pointer active:scale-[0.98]"}`}
+        className={`w-16 h-16 rounded-full border-2 ${
+          isLight
+            ? "border-[#d8d3c1] bg-[#e8e4db] shadow-[inset_0_2px_4px_rgba(255,255,255,1),inset_0_-4px_6px_rgba(0,0,0,0.2),0_4px_8px_rgba(0,0,0,0.15)]"
+            : "border-[#1c1e23] bg-[#2a2c31] shadow-[inset_0_2px_4px_rgba(255,255,255,0.05),inset_0_-4px_6px_rgba(0,0,0,0.5),0_4px_8px_rgba(0,0,0,0.5)]"
+        } relative flex items-center justify-center touch-none transition-transform ${inactive ? "opacity-70" : "cursor-pointer active:scale-[0.98]"}`}
         onPointerDown={handlePointerDown}
       >
         <div
-          className={`w-1 h-6 ${isVolume ? "bg-[#b0351b]" : isLight ? "bg-[#618029]" : "bg-[#666]"} absolute top-2 rounded-full transform origin-bottom ${inactive ? "" : "transition-transform duration-75 ease-out"}`}
+          className={`absolute w-12 h-12 rounded-full ${isLight ? "bg-[#d1ccba] shadow-[inset_0_2px_4px_rgba(0,0,0,0.1),inset_0_-2px_4px_rgba(255,255,255,0.7)]" : "bg-[#1f2125] shadow-[inset_0_2px_4px_rgba(0,0,0,0.4),inset_0_-2px_4px_rgba(255,255,255,0.05)]"} pointer-events-none`}
+        ></div>
+        <div
+          className={`w-1 h-6 ${isVolume ? "bg-[#b0351b]" : isLight ? "bg-[#618029]" : "bg-[#666]"} absolute top-2 rounded-full transform origin-bottom z-10 shadow-[0_1px_2px_rgba(0,0,0,0.3)] ${inactive ? "" : "transition-transform duration-75 ease-out"}`}
           style={{ transform: `rotate(${rotation}deg)` }}
         />
       </div>
@@ -184,12 +194,8 @@ function App() {
     leftGradient: isLight
       ? "from-[#e1ddcb] to-[#d4cfbd] border-[#b5af9f]"
       : "from-[#121417] to-[#0c0d10] border-[#2a2c31]",
-    chassis: isLight
-      ? "bg-[#d8d3c1] border-[#9c9484]"
-      : "bg-de-panel border-[#3a3d45]",
-    dialBg: isLight
-      ? "bg-[#ebede6] border-[#b5af9f]"
-      : "bg-[#08090a] border-[#2a2c31]",
+    chassis: isLight ? "bg-[#d8d3c1]" : "bg-[#1a1c20]",
+    dialBg: isLight ? "bg-[#ebede6]" : "bg-[#08090a]",
     freqText: isLight ? "text-[#2a2b25]" : "text-[#e3e0d7]",
     fmMark: isLight ? "bg-[#618029]/30" : "bg-white/40",
     playlistHeader: isLight
@@ -790,16 +796,22 @@ function App() {
             </div>
 
             {/* Radio Chassis */}
-            <div className="flex-1 flex flex-col items-center justify-center min-h-[400px]">
+            <div className="flex-1 flex flex-col items-center justify-center min-h-[400px] relative">
+              <PagerPanel isLight={isLight} />
+
               <div
                 ref={chassisRef}
-                className={`w-full ${T.chassis} rounded-sm p-4 sm:p-6 lg:p-8 shadow-2xl flex flex-col relative overflow-hidden transition-colors duration-500`}
+                className={`w-full ${T.chassis} rounded sm:rounded-md p-4 sm:p-6 lg:p-8 flex flex-col relative overflow-hidden transition-colors duration-500 z-10 border-[8px] sm:border-[12px] ${
+                  isLight
+                    ? "border-[#d1ccba] border-t-[#dfd9c7] border-l-[#dfd9c7] border-b-[#c1bcab] border-r-[#c1bcab] shadow-[inset_0_2px_8px_rgba(255,255,255,0.7),inset_0_-4px_10px_rgba(0,0,0,0.15)] outline outline-1 outline-[#9c9484]"
+                    : "border-[#16181b] border-t-[#24262b] border-l-[#24262b] border-b-[#0b0c0e] border-r-[#0b0c0e] shadow-[inset_0_2px_8px_rgba(255,255,255,0.05),inset_0_-4px_10px_rgba(0,0,0,0.4)] outline outline-1 outline-[#0b0c0e]"
+                }`}
               >
                 {/* Grime overlay removed */}
 
                 {/* Dial & Frequencies */}
                 <div
-                  className={`${T.dialBg} border-2 p-6 mb-6 relative overflow-hidden shadow-inner flex flex-col gap-4 transition-colors duration-500`}
+                  className={`${T.dialBg} rounded-[4px] p-6 mb-6 relative overflow-hidden flex flex-col gap-4 transition-colors duration-500 border-[3px] sm:border-[4px] ${isLight ? "border-t-[#c1bcab] border-l-[#c1bcab] border-b-[#efecd8] border-r-[#efecd8] shadow-[inset_0_2px_8px_rgba(0,0,0,0.1)] outline outline-1 outline-[#9c9484]" : "border-t-[#111316] border-l-[#111316] border-b-[#32353a] border-r-[#32353a] shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] outline outline-1 outline-black"}`}
                 >
                   <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none bg-[radial-gradient(circle_at_center,_#fff_0%,_transparent_100%)]"></div>
 
@@ -985,7 +997,7 @@ function App() {
                                         <span
                                           className={`font-oswald w-6 ${isActive ? colorClass : T.playlistNumInactive}`}
                                         >
-                                          {(i + 1).toString().padStart(2, "0")}
+                                          {i + 1}
                                         </span>
                                         <span className="tracking-widest text-sm">
                                           {track.title}
@@ -1190,7 +1202,7 @@ function App() {
               >
                 {/* Current Track Info Header - Designed like a Skill context block */}
                 <div className="mb-4">
-                  <div className="flex flex-row justify-between items-start">
+                  <div className="flex flex-row justify-between items-end">
                     <div className="flex flex-col font-serif">
                       <span
                         className={`${groupedPlaylist[currentAlbum]?.color || "text-de-orange"} font-bold text-2xl tracking-wider leading-tight mb-3 whitespace-pre-line drop-shadow-sm transition-colors duration-500`}
@@ -1226,7 +1238,7 @@ function App() {
 
                     {/* LRC Mode Toggle */}
                     <div
-                      className="flex flex-col gap-2 mt-2.5 z-20 shrink-0 ml-2"
+                      className="flex flex-col justify-end pb-[2px] mt-auto z-20 shrink-0 ml-2"
                       title="Toggle Bilingual Lyrics"
                     >
                       <button
@@ -1330,144 +1342,11 @@ function App() {
           <div className="relative w-full max-w-[320px] sm:max-w-md flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
             {/* Reel-To-Reel Container */}
             <div className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] flex items-center justify-center mb-4 mt-8 drop-shadow-2xl">
-              {/* 3D Base/Shadow of the Reel */}
-              <div className="absolute w-[95%] h-[95%] rounded-full bg-[#050a0c] translate-y-2 translate-x-1" />
-
-              {/* Magnetic Tape Spool (Brown) inside */}
-              <div className="absolute w-[78%] h-[78%] rounded-full bg-[#462d1c] flex items-center justify-center shadow-[inset_0_5px_15px_rgba(0,0,0,0.8)] border-4 border-[#2b1b10]">
-                {/* Tape wind grooves */}
-                <div className="absolute inset-0 rounded-full border border-[#593b27] m-2 opacity-40"></div>
-                <div className="absolute inset-0 rounded-full border border-[#593b27] m-4 opacity-30"></div>
-                <div className="absolute inset-0 rounded-full border border-[#2b1b10] m-6 opacity-60"></div>
-                <div className="absolute inset-0 rounded-full border border-[#593b27] m-8 opacity-20"></div>
-                <div className="absolute inset-0 rounded-full border border-[#2b1b10] m-10 opacity-70"></div>
-                <div className="absolute inset-0 rounded-full border border-[#593b27] m-[44px] opacity-50 border-2"></div>
-              </div>
-
-              {/* Metallic Teal Reel Face */}
-              <svg
-                viewBox="0 0 100 100"
-                className="absolute w-full h-full drop-shadow-md"
-                style={{ transform: "rotate(-10deg)" }}
-              >
-                <defs>
-                  <linearGradient id="reelGrad" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#325f75" />
-                    <stop offset="35%" stopColor="#254a5c" />
-                    <stop offset="70%" stopColor="#17313e" />
-                    <stop offset="100%" stopColor="#0d1b22" />
-                  </linearGradient>
-                  <linearGradient id="reelEdge" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#4a89a0" />
-                    <stop offset="100%" stopColor="#0d1b22" />
-                  </linearGradient>
-                  <mask id="reelCutouts">
-                    <circle cx="50" cy="50" r="50" fill="white" />
-                    {/* Central hole */}
-                    <circle cx="50" cy="50" r="14" fill="black" />
-                    {/* The 3 cutout holes. Circumference at r=31: 194.77. 194.77 / 3 = 64.92. StrokeDasharray: dash 26 + gap 38.92 */}
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="31"
-                      fill="none"
-                      stroke="black"
-                      strokeWidth="20"
-                      strokeLinecap="round"
-                      strokeDasharray="26 38.92"
-                      strokeDashoffset="18"
-                    />
-                  </mask>
-                </defs>
-
-                {/* Drop Shadow / Thickness of Reel Face */}
-                <circle
-                  cx="50"
-                  cy="51.5"
-                  r="48"
-                  fill="#0a1217"
-                  mask="url(#reelCutouts)"
-                />
-                <circle
-                  cx="50.5"
-                  cy="50.5"
-                  r="48"
-                  fill="#0f1b21"
-                  mask="url(#reelCutouts)"
-                />
-
-                {/* Base Reel Face */}
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="48"
-                  fill="url(#reelGrad)"
-                  mask="url(#reelCutouts)"
-                  stroke="url(#reelEdge)"
-                  strokeWidth="0.5"
-                />
-
-                {/* Decorative indents on spokes */}
-                {[0, 120, 240].map((deg, i) => (
-                  <g key={i} transform={`rotate(${deg + 45} 50 50)`}>
-                    <line
-                      x1="50"
-                      y1="5"
-                      x2="50"
-                      y2="9"
-                      stroke="#17313e"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      opacity="0.8"
-                    />
-                    <circle cx="50" cy="8.5" r="0.8" fill="#0d1b22" />
-                    <path
-                      d="M 46 25 Q 50 24 54 25"
-                      fill="none"
-                      stroke="#254a5c"
-                      strokeWidth="0.5"
-                      opacity="0.6"
-                    />
-                  </g>
-                ))}
-              </svg>
-
-              {/* Central Hub (Black) */}
-              <div className="absolute w-[34%] h-[34%] rounded-full bg-[#111] z-20 flex items-center justify-center shadow-[0_6px_15px_rgba(0,0,0,0.8)] border-2 border-[#1c2830]">
-                <div className="w-[85%] h-[85%] rounded-full bg-gradient-to-br from-[#2a2a2a] to-[#0a0a0a] flex items-center justify-center relative shadow-inner">
-                  {/* The 3 slots on the hub */}
-                  {[0, 120, 240].map((deg) => (
-                    <div
-                      key={deg}
-                      className="absolute w-[10%] h-[35%] bg-[#000] top-[50%] origin-top rounded-full shadow-[inset_0_2px_4px_rgba(0,0,0,0.9)]"
-                      style={{
-                        transform: `rotate(${deg + 15}deg) translateY(30%)`,
-                      }}
-                    ></div>
-                  ))}
-
-                  {/* 3 small screws */}
-                  {[0, 120, 240].map((deg) => (
-                    <div
-                      key={"s" + deg}
-                      className="absolute w-1.5 h-1.5 bg-[#444] rounded-full shadow-inner top-[50%] origin-top"
-                      style={{
-                        transform: `rotate(${deg - 45}deg) translateY(-140%)`,
-                      }}
-                    ></div>
-                  ))}
-
-                  {/* Small center pin */}
-                  <div className="w-[45%] h-[45%] rounded-full bg-gradient-to-br from-[#8a857a] to-[#4a473e] shadow-[0_2px_6px_rgba(0,0,0,0.8)] z-10 flex items-center justify-center border border-[#333]">
-                    <div className="w-[30%] h-[30%] rounded-full bg-[#222] shadow-inner"></div>
-                    <div className="absolute w-full h-[1px] bg-black/40 rotate-45"></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Lighting overlays to make it pop */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/10 to-transparent pointer-events-none z-30 mix-blend-screen mix-blend-overlay"></div>
-              <div className="absolute inset-0 rounded-full bg-gradient-to-bl from-black/60 to-transparent pointer-events-none z-30 mix-blend-multiply"></div>
+              <img
+                src={tapeReelImg}
+                alt="Tape Reel"
+                className="absolute w-full h-full object-contain"
+              />
 
               {/* Song Title Sticker Overlay */}
               <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
