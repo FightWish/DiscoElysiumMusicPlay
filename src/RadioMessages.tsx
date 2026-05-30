@@ -89,7 +89,7 @@ export function PagerPanel({ isLight }: { isLight: boolean }) {
 
       {/* Pager Panel sliding out from the bottom edge */}
       <div
-        className={`fixed bottom-0 left-4 md:left-[10%] lg:left-[33%] w-[348px] origin-bottom transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-50 flex flex-col ${isOpen ? `translate-y-[-24px] scale-100 ${isLight ? "drop-shadow-[0_-4px_16px_rgba(0,0,0,0.15)]" : "drop-shadow-[0_-4px_16px_rgba(0,0,0,0.4)]"}` : `translate-y-[calc(100%-36px)] scale-95 cursor-pointer ${isLight ? "drop-shadow-[0_-2px_6px_rgba(0,0,0,0.1)]" : "drop-shadow-[0_-2px_6px_rgba(0,0,0,0.3)]"}`}`}
+        className={`fixed bottom-0 left-4 md:left-[10%] lg:left-[33%] w-[348px] origin-bottom transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] z-50 flex flex-col ${isOpen ? `translate-y-[-24px] scale-100 ${isLight ? "drop-shadow-[0_-4px_16px_rgba(0,0,0,0.15)]" : "drop-shadow-[0_-4px_16px_rgba(0,0,0,0.4)]"}` : `translate-y-[calc(100%-40px)] scale-95 cursor-pointer ${isLight ? "drop-shadow-[0_-2px_6px_rgba(0,0,0,0.1)]" : "drop-shadow-[0_-2px_6px_rgba(0,0,0,0.3)]"}`}`}
         onClick={() => !isOpen && setIsOpen(true)}
       >
         {/* Pager Device */}
